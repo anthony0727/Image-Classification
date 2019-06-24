@@ -1,72 +1,47 @@
 import numpy as np
 import numpy.random as npr
 
+import tensorflow as tf
 from abc import abstractmethod
 
 
-class Image:
-    def __init__(self):
-        pass
+def image_augmentation(image, is_training, crop_h, crop_w):
+    def _aug_with_train(input_x, crop_height, crop_width):
+        img_h, img_w, ch = list(map(int, input_x.get_shape()[:]))
 
-    def augment(self, num_data):
-        # how much to augment?
-        pass
+        pad_w = int(img_h * 0.4)
+        pad_h = int(img_w * 0.4)
 
-    @staticmethod
-    def random_crop(images, pad=4):
-        _, h, w, _ = images.shape
+        input_x = tf.image.resize_image_with_crop_or_pad(input_x, img_h + pad_h, img_w + pad_w)
+        input_x = tf.image.random_crop(input_x, [crop_height, crop_width, ch])
+        input_x = tf.image.random_flip_left_right(input_x)
+        input_x = tf.image.random_flip_up_down(input_x)
 
-        pad_images = np.pad(images, [(0, 0), (pad, pad), (pad, pad), (0, 0)], 'constant')
+        input_x = tf.image.random_hue(input_x, maxdelta=63. / 255.)
+        input_x = tf.image.random_brightness(input_x, max_delta=63. / 255.)
+        input_x = tf.image.random_saturation(input_x, lower=0.5, upper=1.8)
 
-        crops = []
-        for i, img in enumerate(pad_images):
-            x, y = npr.randint(0, 2 * pad - 1), npr.randint(0, 2 * pad - 1)
-            crop = img[y:y + h, x:x + w]
-            crops.append(crop)
+        return input_x
 
-        return np.stack(crops)
+    def _aug_with_test(input_x, crop_height, crop_width):
+        input_x = tf.image.resize_image_with_crop_or_pad(input_x, crop_height, crop_width)
+        input_x = tf.image.per_image_standardization(input_x)
 
-    @staticmethod
-    def random_flip_up_down(images):
+        return input_x
 
-        size = npr.randint(len(images) - 1)
-        indices = npr.choice(range(len(images)), size)
-
-        images[indices] = images[indices, ::-1, :]
-
-        return images
-
-    @staticmethod
-    def random_flip_left_right(images):
-        size = npr.randint(len(images) - 1)
-        indices = npr.choice(range(len(images)), size)
-
-        images[indices] = images[indices, :, ::-1]
-
-        return images
-
-        pass
-
-    def random_rotate(self, images, max_angle=30):
-        _, h, w, _ = images.shape
-        for i, img in enumerate(images):
-            angle = npr.randint(-max_angle, max_angle)
-            M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1)
-            images[i] = cv2.warpAffine(img, M, (w, h))
-
-        return images
-
-    def random_hue(self):
-        pass
-
-    def random_saturation(self):
-        pass
-
-    def random_brightness(self):
-        pass
+    image = tf.cond(is_training,
+                    lambda: _aug_with_train(image, crop_h, crop_w),
+                    lambda: _aug_with_test(image, crop_h, crop_w))
+    return image
 
 
-class Cifar10(Image):
+def images_augmentation(images, phase_train):
+    crop_h, crop_w = list(map(int, images.get_shape()[1:3]))
+    images = tf.map_fn(lambda image: image_augmentation(image, phase_train, crop_h, crop_w), images)
+    return images
+
+
+class Cifar10:
     """ wrapper class for keras.dataset.cifar10
 
     usage:
