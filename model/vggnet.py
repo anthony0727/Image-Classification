@@ -25,11 +25,27 @@ def fc(flat_layer, units, activation, initializer, layer_name):
 
 
 class VGGNet(Network):
-    def train(self, optimizer):
-        pass
-
     def __init__(self):
         super(VGGNet, self).__init__()
+
+    def build(self, shape):
+        self.attach_placeholders(shape)
+        self.attach_layers()
+        self.attach_loss()
+        self.attach_metric()
+        self.attach_summary()
+
+    def fit(self, data):
+        self.build(data.x_shape)
+
+        from util import train
+        self.graph = train(self, data)
+
+    def transfer(self, network):
+        pass
+
+    def train(self, optimizer):
+        pass
 
     def attach_placeholders(self, shape):
         with self.graph.as_default():
@@ -96,19 +112,3 @@ class VGGNet(Network):
             tf.summary.scalar('accuracy', acc)
             tf.summary.scalar('loss', loss)
             tf.summary.merge_all(name='merge_all')
-
-    def build(self, shape):
-        self.attach_placeholders(shape)
-        self.attach_layers()
-        self.attach_loss()
-        self.attach_metric()
-        self.attach_summary()
-
-    def fit(self, data):
-        self.build(data.x_shape)
-
-        from util import train
-        self.graph = train(self, data)
-
-    def transfer(self, network):
-        pass

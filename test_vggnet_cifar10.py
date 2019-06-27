@@ -43,6 +43,7 @@ def train(network, data, optimizer='momentum'):
 
         save_root_folder = os.path.join(ROOT, 'save_root_folder')
 
+
         train_generator = generator(data.y_train, batch_size)
         for i in range(epochs):
             batch_xs, batch_ys = next(train_generator)

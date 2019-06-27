@@ -8,19 +8,6 @@ import matplotlib.pyplot as plt
 
 from ABCNet import Network
 
-input_shape = (224, 224, 3)
-num_classes = 1000
-
-graph = tf.Graph()
-
-with graph.as_default():
-    images = tf.placeholder(tf.float32, (None, *input_shape), name='images')
-    labels = tf.placeholder(tf.int32, (None,), name='labels')
-
-with tf.variable_scope('preprocess'):
-    image_mean = tf.constant([123.68, 116.779, 103.939])
-    x = images - image_mean
-
 he_init = tf.initializers.he_uniform()
 xavier_init = tf.initializers.glorot_normal()
 
@@ -81,12 +68,36 @@ def auxiliary_network(block_4a, block_4d):
     return aux_logit_4a, aux_logit_4d
 
 
-class GoogLeNet(Network, ABC):
+class GoogLeNet(Network):
     def __init__(self):
         super(GoogLeNet, self).__init__()
 
-    def build(self):
-        pass
+        input_shape = (224, 224, 3)
+        num_classes = 1000
+
+    def attach_placeholders(self, shape):
+        with self.graph.as_default():
+            images = tf.placeholder(tf.float32, (None, *shape), name='images')
+            labels = tf.placeholder(tf.int32, (None,), name='labels')
+
+            image_mean = tf.constant([123.68, 116.779, 103.939])
+            x = images - image_mean
+
+            lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
+
+    def attach_summary(self):
+        with self.graph.as_default():
+            tf.summary.scalar('top5_accuracy', top_5)
+            tf.summary.scalar('top1_accuracy', top_1)
+            tf.summary.scalar('loss', metric_loss)
+            merged = tf.summary.merge_all()
+
+    def build(self, shape):
+        self.attach_placeholders(shape)
+        self.attach_layers()
+        self.attach_loss()
+        self.attach_metric()
+        self.attach_summary()
 
     def train(self, optimizer):
         pass
@@ -109,7 +120,6 @@ class GoogLeNet(Network, ABC):
             pool2 = tf.layers.MaxPooling2D((3, 3), (2, 2),
                                            name='MaxPool_2')(conv2)
 
-        with graph.as_default():
             block_3a = inception_module(pool2, 64, 96, 128, 16, 32, 32, 'inception_3a')
             block_3b = inception_module(block_3a, 128, 128, 192, 32, 96, 64, 'inception_3b')
             pool3 = tf.layers.MaxPooling2D((3, 3), (2, 2), padding='SAME', name='MaxPool_3')(block_3b)
@@ -126,21 +136,14 @@ class GoogLeNet(Network, ABC):
 
     def attach_loss(self):
         with self.graph.as_default():
-            labels = tf.placeholder(tf.int64, shape=(None,), name='labels')
-
             with tf.variable_scope('losses'):
                 main_loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
                 aux_4a_loss = tf.losses.sparse_softmax_cross_entropy(labels, aux_logit_4a)
                 aux_4d_loss = tf.losses.sparse_softmax_cross_entropy(labels, aux_logit_4d)
-                loss = main_loss + 0.3 * aux_logit_4a + 0.3 * aux_4d_loss
-
-
-    with graph.as_default():
-        lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
-        train_op = tf.train.MomentumOptimizer(lr, 0.9).minimize(loss)
+                loss = main_loss + 0.3 * aux_4a_loss + 0.3 * aux_4d_loss
 
     def attach_metric(self):
-        with graph.as_default():
+        with self.graph.as_default():
             with tf.variable_scope('metrics'):
                 top_5, top_5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(logits, labels, k=5), tf.float32) * 100)
 
@@ -148,15 +151,15 @@ class GoogLeNet(Network, ABC):
 
                 metric_loss, metric_loss_op = tf.metrics.mean(main_loss)
 
-                metric_init_op = tf.group([var.initializer for var in graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)],
-                                          name='metric_init_op')
+                metric_init_op = tf.group(
+                    [var.initializer for var in self.graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)],
+                    name='metric_init_op')
                 metric_update_op = tf.group([top_5_op, top_1_op, metric_loss_op], name='metric_update_op')
 
-                top_5 = tf.identity(top_5, 'top5_acc')
-                top_1 = tf.identity(top_1, 'top1_acc')
-                metric_loss = tf.identity(metric_loss, 'metric_loss')
+                tf.identity(top_5, 'top5_acc')
+                tf.identity(top_1, 'top1_acc')
+                tf.identity(metric_loss, 'metric_loss')
 
-                tf.summary.scalar('top5_accuracy', top_5)
-                tf.summary.scalar('top1_accuracy', top_1)
-                tf.summary.scalar('loss', metric_loss)
-                merged = tf.summary.merge_all()
+    # with self.graph.as_default():
+    #
+    #     train_op = tf.train.MomentumOptimizer(lr, 0.9).minimize(loss)
