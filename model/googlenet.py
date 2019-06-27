@@ -61,7 +61,6 @@ class GoogLeNet(Network):
         # input_shape = (224, 224, 3)
         # num_classes = 1000
         self.input_shape = None
-        self.num_class = 0
 
         # additional attrs
         self.top5_accuracy, self.top1_accuracy = None, None
@@ -136,4 +135,4 @@ class GoogLeNet(Network):
             tf.summary.scalar('top5_accuracy', self.top5_accuracy)
             tf.summary.scalar('top1_accuracy', self.top1_accuracy)
             tf.summary.scalar('loss', self.loss)
-        tf.summary.merge_all(name='merge_all')
+            tf.summary.merge_all(name='merge_all')

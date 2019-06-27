@@ -29,13 +29,13 @@ class Network(ABC):
         self.input_shape = input_shape
         self.n_class = num_class
 
-        self.attach_placeholders()
-        self.attach_layers()
-        self.attach_loss()
-        self.attach_metric()
-        self.attach_summary()
-
-        self.saver = tf.train.Saver()
+        with self.graph.as_default():
+            self.attach_placeholders()
+            self.attach_layers()
+            self.attach_loss()
+            self.attach_metric()
+            self.attach_summary()
+            self.saver = tf.train.Saver()
 
     def transfer(self):
         pass
