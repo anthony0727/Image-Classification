@@ -2,7 +2,6 @@ import numpy as np
 import numpy.random as npr
 
 import tensorflow as tf
-from abc import abstractmethod
 
 
 def image_augmentation(image, is_training, crop_h, crop_w):
@@ -17,9 +16,11 @@ def image_augmentation(image, is_training, crop_h, crop_w):
         input_x = tf.image.random_flip_left_right(input_x)
         input_x = tf.image.random_flip_up_down(input_x)
 
-        input_x = tf.image.random_hue(input_x, maxdelta=63. / 255.)
+        input_x = tf.image.random_hue(input_x, max_delta=63. / 255.)
         input_x = tf.image.random_brightness(input_x, max_delta=63. / 255.)
         input_x = tf.image.random_saturation(input_x, lower=0.5, upper=1.8)
+
+        input_x = tf.image.per_image_standardization(input_x)
 
         return input_x
 

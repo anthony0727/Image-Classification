@@ -15,21 +15,26 @@ def conv(input_xs, units, k, s, padding, activation, name):
     return layer
 
 
+def vggblock():
+    pass
+
+
 def fc(flat_layer, units, activation, initializer, layer_name):
     layer = tf.layers.Dense(units, activation, kernel_initializer=initializer, name=layer_name)(flat_layer)
     return layer
 
 
 class VGGNet(Network):
+    def train(self, optimizer):
+        pass
+
     def __init__(self):
-        self.graph = tf.Graph()
+        super(VGGNet, self).__init__()
 
-        self.saver = tf.train.Saver()  # fix me#
-        self.train_writer = tf.summary.FileWriter('./train_tb')  # fix me #
-        self.test_writer = tf.summary.FileWriter('./test_tb')  # fix me #
+    def __attach_vggblock(self):
+        pass
 
-
-    def __attach_placeholders(self, shape):
+    def attach_placeholders(self, shape):
         with self.graph.as_default():
             # define input placeholder
             tf.placeholder(tf.float32, (None, *shape), name='xs')  # fix me #
@@ -37,16 +42,16 @@ class VGGNet(Network):
             tf.placeholder(tf.float32, (), name='lr')  # fix me #
             tf.placeholder(tf.bool, name='phase_train')  # fix me #
 
-    def __attach_layers(self):
+    def attach_layers(self):
         with self.graph.as_default():
             xs = self.graph.get_tensor_by_name('xs:0')
             phase_train = self.graph.get_tensor_by_name('phase_train:0')
 
             #########################################################
 
-            layer1 = conv(xs, 64, (3, 3), (1, 1), 'SAME', tf.nn.relu, 'layer1')
+            layer1 = self.conv(xs, 64, (3, 3), (1, 1), 'SAME', tf.nn.relu, 'layer1')
 
-            layer2 = conv(layer1, 128, (3, 3), (2, 2), 'SAME', tf.nn.relu, 'layer2')
+            layer2 = self.conv(layer1, 128, (3, 3), (2, 2), 'SAME', tf.nn.relu, 'layer2')
 
             top_conv = tf.identity(layer2, 'top_conv')
 
@@ -62,7 +67,7 @@ class VGGNet(Network):
             outputs = fc(fc_layer_2, 10, None, None, 'outputs')
             tf.identity(outputs, 'logits')
 
-    def __attach_loss(self):
+    def attach_loss(self):
         with self.graph.as_default():
             labels = self.graph.get_tensor_by_name('ys:0')
             logits = self.graph.get_tensor_by_name('logits:0')
@@ -77,30 +82,30 @@ class VGGNet(Network):
 
             tf.add_to_collection(tf.GraphKeys.LOSSES, loss)
 
-    def __attach_metric(self):
+    def attach_metric(self):
         # metric
         with self.graph.as_default():
             labels = self.graph.get_tensor_by_name('ys:0')
             logits = self.graph.get_tensor_by_name('logits:0')
 
             logits_cls = tf.cast(tf.argmax(logits, axis=1), tf.int32)
-            acc = tf.metrics.accuracy(labels, logits_cls, name='accuracy')  # you need to init local vars for this
+            tf.metrics.accuracy(labels, logits_cls, name='accuracy')  # you need to init local vars for this
 
-    def __attach_summary(self):
+    def attach_summary(self):
         with self.graph.as_default():
             acc = self.graph.get_tensor_by_name('accuracy:0')
             loss = self.graph.get_tensor_by_name('loss:0')
 
             tf.summary.scalar('accuracy', acc)
             tf.summary.scalar('loss', loss)
-            merged = tf.summary.merge_all(name='merge_all')
+            tf.summary.merge_all(name='merge_all')
 
     def build(self, shape):
-        self.__attach_placeholders(shape)
-        self.__attach_layers()
-        self.__attach_loss()
-        self.__attach_metric()
-        self.__attach_summary()
+        self.attach_placeholders(shape)
+        self.attach_layers()
+        self.attach_loss()
+        self.attach_metric()
+        self.attach_summary()
 
     def fit(self, data):
         self.build(data.x_shape)
