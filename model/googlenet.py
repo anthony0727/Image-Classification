@@ -68,7 +68,6 @@ class GoogLeNet(Network):
         self.aux_4a_loss, self.aux_4d_loss = None, None
         self.aux_logit_4a, self.aux_logit_4d = None, None
 
-
     def attach_placeholders(self):
         with self.graph.as_default():
             images = tf.placeholder(tf.float32, (None, *self.input_shape), name='images')
@@ -77,12 +76,6 @@ class GoogLeNet(Network):
             self.xs = images - image_mean
             self.ys = tf.placeholder(tf.int32, (None,), name='labels')
             self.lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
-
-    def train(self, optimizer):
-        pass
-
-    def transfer(self):
-        pass
 
     def attach_layers(self):
         with self.graph.as_default():

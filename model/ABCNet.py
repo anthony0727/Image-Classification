@@ -34,6 +34,9 @@ class Network(ABC):
         self.attach_metric()
         self.attach_summary()
 
+    def transfer(self):
+        pass
+
     @abstractmethod
     def attach_placeholders(self):
         pass
@@ -52,10 +55,6 @@ class Network(ABC):
 
     @abstractmethod
     def attach_summary(self):
-        pass
-
-    @abstractmethod
-    def train(self, optimizer):
         pass
 
     @abstractmethod

@@ -38,9 +38,6 @@ class VGGNet(Network):
     def transfer(self, network):
         pass
 
-    def train(self, optimizer):
-        pass
-
     def attach_placeholders(self):
         with self.graph.as_default():
             # define input placeholder
