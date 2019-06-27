@@ -58,15 +58,16 @@ class GoogLeNet(Network):
     def __init__(self):
         super(GoogLeNet, self).__init__()
 
+        # input_shape = (224, 224, 3)
+        # num_classes = 1000
         self.input_shape = None
         self.num_class = 0
 
         # additional attrs
+        self.top5_accuracy, self.top1_accuracy = None, None
         self.aux_4a_loss, self.aux_4d_loss = None, None
         self.aux_logit_4a, self.aux_logit_4d = None, None
 
-        # input_shape = (224, 224, 3)
-        # num_classes = 1000
 
     def attach_placeholders(self):
         with self.graph.as_default():
@@ -120,30 +121,26 @@ class GoogLeNet(Network):
     def attach_metric(self):
         with self.graph.as_default():
             with tf.variable_scope('metrics'):
-                top_5, top_5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=5), tf.float32) * 100)
+                top5, top5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=5), tf.float32) * 100)
 
-                top_1, top_1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=1), tf.float32) * 100)
+                top1, top1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=1), tf.float32) * 100)
 
                 metric_loss, metric_loss_op = tf.metrics.mean(self.loss)
 
                 metric_init_op = tf.group(
                     [var.initializer for var in self.graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)],
                     name='metric_init_op')
-                metric_update_op = tf.group([top_5_op, top_1_op, metric_loss_op], name='metric_update_op')
+                metric_update_op = tf.group([top5_op, top1_op, metric_loss_op], name='metric_update_op')
 
-                tf.identity(top_5, 'top5_acc')
-                tf.identity(top_1, 'top1_acc')
+                self.top5_accuracy = tf.identity(top5, 'top5_acc')
+                self.top1_accuracy = tf.identity(top1, 'top1_acc')
                 tf.identity(metric_loss, 'metric_loss')
 
     def attach_summary(self):
         with self.graph.as_default():
             # for metric in self.metrics:
             #     tf.summary.scalar(*metric)
-            tf.summary.scalar('top5_accuracy', top_5)
-            tf.summary.scalar('top1_accuracy', top_1)
+            tf.summary.scalar('top5_accuracy', self.top5_accuracy)
+            tf.summary.scalar('top1_accuracy', self.top1_accuracy)
             tf.summary.scalar('loss', self.loss)
         tf.summary.merge_all(name='merge_all')
-
-    # with self.graph.as_default():
-    #
-    #     train_op = tf.train.MomentumOptimizer(lr, 0.9).minimize(loss)
