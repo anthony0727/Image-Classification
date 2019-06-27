@@ -11,10 +11,10 @@ from data import Cifar10
 
 N_VGGBLOCK = 5
 
-vgg11_config = [-1, 1, 1, 2, 2, 2]
-vgg13_config = [-1, 2, 2, 2, 2, 2]
-vgg16_config = [-1, 2, 2, 3, 3, 3]
-vgg19_config = [-1, 2, 2, 4, 4, 4]
+vgg11_config = [1, 1, 2, 2, 2]
+vgg13_config = [2, 2, 2, 2, 2]
+vgg16_config = [2, 2, 3, 3, 3]
+vgg19_config = [2, 2, 4, 4, 4]
 
 vgg_config = {
     11: vgg11_config,
@@ -23,7 +23,7 @@ vgg_config = {
     19: vgg19_config
 }
 
-filters_config = [-1, 64, 128, 256, 512, 512]
+filters_config = [64, 128, 256, 512, 512]
 
 
 def conv(prev_layer, units, name):
@@ -61,11 +61,10 @@ class VGGNet(Network):
         layer = self.xs
 
         blocks = vgg_config[self.n_layer]
-        for ith_block in range(1, N_VGGBLOCK + 1):
+        n_filters = filters_config
+        for ith_block, (n_layers, filters) in enumerate(zip(blocks, n_filters), start=1):
             with tf.variable_scope('VGGBLOCK-{}'.format(ith_block)):
-                block = blocks[ith_block]
-                for ith_layer in range(1, block + 1):
-                    filters = filters_config[ith_block]
+                for ith_layer in range(1, n_layers + 1):
                     layer = conv(layer, filters, name='conv{}'.format(ith_layer))
                 layer = tf.layers.MaxPooling2D((2, 2), (2, 2), name='MaxPool-{}'.format(ith_block))(layer)
 
@@ -96,3 +95,10 @@ class VGGNet(Network):
         tf.summary.scalar('accuracy', self.accuracy)
         tf.summary.scalar('loss', self.loss)
         tf.summary.merge_all(name='merge_all')
+
+
+net = VGGNet(13)
+net.build((32, 32, 3), 10)
+
+for var in net.graph.get_collection('variables'):
+    print(var)
