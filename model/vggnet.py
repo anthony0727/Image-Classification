@@ -31,7 +31,6 @@ class VGGNet(Network):
     def __init__(self):
         super(VGGNet, self).__init__()
 
-
     def attach_placeholders(self, shape):
         with self.graph.as_default():
             # define input placeholder

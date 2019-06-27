@@ -59,7 +59,7 @@ def inception_module(prev_layer,
     return out
 
 
-def auxiliary_network():
+def auxiliary_network(block_4a, block_4d):
     with tf.variable_scope('auxiliary_network_4a'):
         avg_pool = tf.layers.AveragePooling2D((5, 5), (3, 3))(block_4a)
         conv = tf.layers.Conv2D(128, (1, 1), kernel_initializer=he_init, activation=tf.nn.relu, name='1x1')(
@@ -79,6 +79,8 @@ def auxiliary_network():
         fc = tf.layers.Dense(1024, kernel_initializer=he_init, activation=tf.nn.relu)(fc)
         fc = tf.layers.Dropout(0.7)(fc)
         aux_logit_4d = tf.layers.Dense(1000, kernel_initializer=xavier_init)(fc)
+
+    return aux_logit_4a, aux_logit_4d
 
 
 class GoogLeNet(Network, ABC):
