@@ -4,6 +4,8 @@ import tensorflow as tf
 
 class Network(ABC):
     def __init__(self):
+        self.xs, self.ys, self.lr, self.loss, self.accuracy, self.logits = None, None, None, None, None, None
+
         self.graph = tf.Graph()
         self.saver = tf.train.Saver()
         self.train_writer = tf.summary.FileWriter('./train_tb')

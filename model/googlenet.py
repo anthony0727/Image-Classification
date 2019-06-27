@@ -72,25 +72,30 @@ class GoogLeNet(Network):
     def __init__(self):
         super(GoogLeNet, self).__init__()
 
-        input_shape = (224, 224, 3)
-        num_classes = 1000
+        # additional attrs
+        self.aux_4a_loss, self.aux_4d_loss = None, None
+        self.aux_logit_4a, self.aux_logit_4d = None, None
+
+        # input_shape = (224, 224, 3)
+        # num_classes = 1000
 
     def attach_placeholders(self, shape):
         with self.graph.as_default():
             images = tf.placeholder(tf.float32, (None, *shape), name='images')
-            labels = tf.placeholder(tf.int32, (None,), name='labels')
-
             image_mean = tf.constant([123.68, 116.779, 103.939])
-            x = images - image_mean
 
-            lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
+            self.xs = images - image_mean
+            self.ys = tf.placeholder(tf.int32, (None,), name='labels')
+            self.lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
 
     def attach_summary(self):
         with self.graph.as_default():
+            # for metric in self.metrics:
+            #     tf.summary.scalar(*metric)
             tf.summary.scalar('top5_accuracy', top_5)
             tf.summary.scalar('top1_accuracy', top_1)
-            tf.summary.scalar('loss', metric_loss)
-            merged = tf.summary.merge_all()
+            tf.summary.scalar('loss', self.loss)
+        tf.summary.merge_all(name='merge_all')
 
     def build(self, shape):
         self.attach_placeholders(shape)
@@ -109,16 +114,11 @@ class GoogLeNet(Network):
         with self.graph.as_default():
             he_init = tf.initializers.he_uniform()
 
-            conv1 = tf.layers.Conv2D(64, (7, 7), (2, 2), padding='SAME',
-                                     kernel_initializer=he_init,
-                                     name='7x7_conv')(x)
+            conv1 = tf.layers.Conv2D(64, (7, 7), (2, 2), padding='SAME', kernel_initializer=he_init, name='7x7_conv')(x)
             pool1 = tf.layers.MaxPooling2D((3, 3), (2, 2), name='MaxPool_1')(conv1)
-            conv2 = tf.layers.Conv2D(192, (3, 3), padding='SAME',
-                                     kernel_initializer=he_init,
-                                     name='3x3_conv')(pool1)
+            conv2 = tf.layers.Conv2D(192, (3, 3), padding='SAME', kernel_initializer=he_init, name='3x3_conv')(pool1)
 
-            pool2 = tf.layers.MaxPooling2D((3, 3), (2, 2),
-                                           name='MaxPool_2')(conv2)
+            pool2 = tf.layers.MaxPooling2D((3, 3), (2, 2), name='MaxPool_2')(conv2)
 
             block_3a = inception_module(pool2, 64, 96, 128, 16, 32, 32, 'inception_3a')
             block_3b = inception_module(block_3a, 128, 128, 192, 32, 96, 64, 'inception_3b')
@@ -137,19 +137,19 @@ class GoogLeNet(Network):
     def attach_loss(self):
         with self.graph.as_default():
             with tf.variable_scope('losses'):
-                main_loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
-                aux_4a_loss = tf.losses.sparse_softmax_cross_entropy(labels, aux_logit_4a)
-                aux_4d_loss = tf.losses.sparse_softmax_cross_entropy(labels, aux_logit_4d)
-                loss = main_loss + 0.3 * aux_4a_loss + 0.3 * aux_4d_loss
+                loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.logits)
+                self.aux_4a_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4a)
+                self.aux_4d_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4d)
+                self.loss = loss + 0.3 * self.aux_4a_loss + 0.3 * self.aux_4d_loss
 
     def attach_metric(self):
         with self.graph.as_default():
             with tf.variable_scope('metrics'):
-                top_5, top_5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(logits, labels, k=5), tf.float32) * 100)
+                top_5, top_5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=5), tf.float32) * 100)
 
-                top_1, top_1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(logits, labels, k=1), tf.float32) * 100)
+                top_1, top_1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=1), tf.float32) * 100)
 
-                metric_loss, metric_loss_op = tf.metrics.mean(main_loss)
+                metric_loss, metric_loss_op = tf.metrics.mean(self.loss)
 
                 metric_init_op = tf.group(
                     [var.initializer for var in self.graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)],

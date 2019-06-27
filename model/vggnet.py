@@ -50,19 +50,14 @@ class VGGNet(Network):
     def attach_placeholders(self, shape):
         with self.graph.as_default():
             # define input placeholder
-            tf.placeholder(tf.float32, (None, *shape), name='xs')  # fix me #
-            tf.placeholder(tf.float32, (None,), name='ys')  # fix me #
-            tf.placeholder(tf.float32, (), name='lr')  # fix me #
-            tf.placeholder(tf.bool, name='phase_train')  # fix me #
+            self.xs = tf.placeholder(tf.float32, (None, *shape), name='xs')  # fix me #
+            self.ys = tf.placeholder(tf.float32, (None,), name='ys')  # fix me #
+            self.lr = tf.placeholder(tf.float32, (), name='lr')  # fix me #
+            self.phase_train = tf.placeholder(tf.bool, name='phase_train')  # fix me #
 
     def attach_layers(self):
         with self.graph.as_default():
-            xs = self.graph.get_tensor_by_name('xs:0')
-            phase_train = self.graph.get_tensor_by_name('phase_train:0')
-
-            #########################################################
-
-            layer1 = conv(xs, 64, (3, 3), (1, 1), 'SAME', tf.nn.relu, 'layer1')
+            layer1 = conv(self.xs, 64, (3, 3), (1, 1), 'SAME', tf.nn.relu, 'layer1')
 
             layer2 = conv(layer1, 128, (3, 3), (2, 2), 'SAME', tf.nn.relu, 'layer2')
 
@@ -72,43 +67,38 @@ class VGGNet(Network):
 
             fc_initializer = tf.initializers.glorot_normal  # fix me#
             fc_layer_1 = fc(flat_layer, 256, tf.nn.relu, fc_initializer, 'fc_layer_1')
-            fc_layer_1 = tf.layers.dropout(fc_layer_1, training=phase_train, rate=0.7)
+            fc_layer_1 = tf.layers.dropout(fc_layer_1, training=self.phase_train, rate=0.7)
 
             fc_layer_2 = fc(fc_layer_1, 256, tf.nn.relu, fc_initializer, 'fc_layer_2')
-            fc_layer_2 = tf.layers.dropout(fc_layer_2, training=phase_train, rate=0.7)
+            fc_layer_2 = tf.layers.dropout(fc_layer_2, training=self.phase_train, rate=0.7)
 
             outputs = fc(fc_layer_2, 10, None, None, 'outputs')
+
+            self.logits = outputs
             tf.identity(outputs, 'logits')
 
     def attach_loss(self):
         with self.graph.as_default():
-            labels = self.graph.get_tensor_by_name('ys:0')
-            logits = self.graph.get_tensor_by_name('logits:0')
-
             l2_reg = tf.reduce_sum(
                 [tf.nn.l2_loss(var) for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)])  # fix me #
             l2_beta = 0.01
 
-            loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels, logits)
-            loss = tf.reduce_mean(loss, name='loss') + (l2_beta * l2_reg)
-            tf.identity(loss, 'loss')
+            loss = tf.nn.softmax_cross_entropy_with_logits_v2(self.ys, self.logits)
+            loss = tf.reduce_mean(loss) + (l2_beta * l2_reg)
 
+            self.loss = loss
+
+            tf.identity(loss, 'loss')
             tf.add_to_collection(tf.GraphKeys.LOSSES, loss)
 
     def attach_metric(self):
         # metric
         with self.graph.as_default():
-            labels = self.graph.get_tensor_by_name('ys:0')
-            logits = self.graph.get_tensor_by_name('logits:0')
-
-            logits_cls = tf.cast(tf.argmax(logits, axis=1), tf.int32)
-            tf.metrics.accuracy(labels, logits_cls, name='accuracy')  # you need to init local vars for this
+            logits_cls = tf.cast(tf.argmax(self.logits, axis=1), tf.int32)
+            tf.metrics.accuracy(self.ys, logits_cls, name='accuracy')  # you need to init local vars for this
 
     def attach_summary(self):
         with self.graph.as_default():
-            acc = self.graph.get_tensor_by_name('accuracy:0')
-            loss = self.graph.get_tensor_by_name('loss:0')
-
-            tf.summary.scalar('accuracy', acc)
-            tf.summary.scalar('loss', loss)
+            tf.summary.scalar('accuracy', self.accuracy)
+            tf.summary.scalar('loss', self.loss)
             tf.summary.merge_all(name='merge_all')
