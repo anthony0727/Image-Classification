@@ -15,7 +15,7 @@ def conv(input_xs, units, k, s, padding, activation, name):
     return layer
 
 
-def vggblock():
+def vgg_block():
     pass
 
 
@@ -31,8 +31,6 @@ class VGGNet(Network):
     def __init__(self):
         super(VGGNet, self).__init__()
 
-    def __attach_vggblock(self):
-        pass
 
     def attach_placeholders(self, shape):
         with self.graph.as_default():
