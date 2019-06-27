@@ -15,31 +15,35 @@ def conv(input_xs, units, k, s, padding, activation, name):
     return layer
 
 
-def vgg_block():
-    pass
-
-
 def fc(flat_layer, units, activation, initializer, layer_name):
     layer = tf.layers.Dense(units, activation, kernel_initializer=initializer, name=layer_name)(flat_layer)
+    return layer
+
+
+def vgg_block(i, filters, layer):
+    with tf.variable_scope('VGGBLOCK-{}'.format(i)):
+        layer = tf.layers.Conv2D(filters, (3, 3), (1, 1), 'SAME', activation=tf.nn.relu, name='conv1')(layer)
+        layer = tf.layers.Conv2D(filters, (3, 3), (1, 1), 'SAME', activation=tf.nn.relu, name='conv2')(layer)
+    layer = tf.layers.MaxPooling2D((2, 2), (2, 2), name='MaxPool-{}'.format(i))(layer)
+
     return layer
 
 
 class VGGNet(Network):
     def __init__(self):
         super(VGGNet, self).__init__()
+        self.input_shape = None
+        self.num_class = 0
 
-    def build(self, shape):
-        self.attach_placeholders(shape)
+    def build(self, input_shape, num_class):
+        self.input_shape = input_shape
+        self.num_class = num_class
+
+        self.attach_placeholders()
         self.attach_layers()
         self.attach_loss()
         self.attach_metric()
         self.attach_summary()
-
-    def fit(self, data):
-        self.build(data.x_shape)
-
-        from util import train
-        self.graph = train(self, data)
 
     def transfer(self, network):
         pass
@@ -47,35 +51,35 @@ class VGGNet(Network):
     def train(self, optimizer):
         pass
 
-    def attach_placeholders(self, shape):
+    def attach_placeholders(self):
         with self.graph.as_default():
             # define input placeholder
-            self.xs = tf.placeholder(tf.float32, (None, *shape), name='xs')  # fix me #
-            self.ys = tf.placeholder(tf.float32, (None,), name='ys')  # fix me #
-            self.lr = tf.placeholder(tf.float32, (), name='lr')  # fix me #
-            self.phase_train = tf.placeholder(tf.bool, name='phase_train')  # fix me #
+            self.xs = tf.placeholder(tf.float32, (None, *self.shape), name='xs')
+            self.ys = tf.placeholder(tf.float32, (None,), name='ys')
+            self.lr = tf.placeholder(tf.float32, (), name='lr')
+            self.is_train = tf.placeholder(tf.bool, name='phase_train')
 
     def attach_layers(self):
         with self.graph.as_default():
-            layer1 = conv(self.xs, 64, (3, 3), (1, 1), 'SAME', tf.nn.relu, 'layer1')
+            with tf.variable_scope('VGGBLOCK-1'):
+                layer = tf.layers.Conv2D(32, (3, 3), (1, 1), 'SAME', activation=tf.nn.relu, name='conv1')(self.xs)
+            with tf.variable_scope('VGGBLOCK-2'):
+                layer = tf.layers.Conv2D(64, (3, 3), (1, 1), 'SAME', activation=tf.nn.relu, name='conv1')(layer)
 
-            layer2 = conv(layer1, 128, (3, 3), (2, 2), 'SAME', tf.nn.relu, 'layer2')
+            # 중복 코드 도저히 못참겠다...
+            filter_config = [128, 256, 256]
+            for i in range(3):
+                block_num = i+3
+                layer = vgg_block(block_num, filter_config[i], layer)
 
-            top_conv = tf.identity(layer2, 'top_conv')
+            with tf.variable_scope('FC'):
+                layer = tf.layers.Flatten()(layer)
+                layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
+                layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
+                logits = tf.layers.Dense(self.num_class)(layer)
 
-            flat_layer = tf.layers.Flatten()(top_conv)
-
-            fc_initializer = tf.initializers.glorot_normal  # fix me#
-            fc_layer_1 = fc(flat_layer, 256, tf.nn.relu, fc_initializer, 'fc_layer_1')
-            fc_layer_1 = tf.layers.dropout(fc_layer_1, training=self.phase_train, rate=0.7)
-
-            fc_layer_2 = fc(fc_layer_1, 256, tf.nn.relu, fc_initializer, 'fc_layer_2')
-            fc_layer_2 = tf.layers.dropout(fc_layer_2, training=self.phase_train, rate=0.7)
-
-            outputs = fc(fc_layer_2, 10, None, None, 'outputs')
-
-            self.logits = outputs
-            tf.identity(outputs, 'logits')
+            self.logits = tf.identity(logits, name='logits')
+            pred = tf.nn.softmax(logits, name='predictions')
 
     def attach_loss(self):
         with self.graph.as_default():
@@ -92,7 +96,6 @@ class VGGNet(Network):
             tf.add_to_collection(tf.GraphKeys.LOSSES, loss)
 
     def attach_metric(self):
-        # metric
         with self.graph.as_default():
             logits_cls = tf.cast(tf.argmax(self.logits, axis=1), tf.int32)
             tf.metrics.accuracy(self.ys, logits_cls, name='accuracy')  # you need to init local vars for this
