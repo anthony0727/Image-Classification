@@ -46,9 +46,9 @@ class VGGNet(Network):
 
             #########################################################
 
-            layer1 = self.conv(xs, 64, (3, 3), (1, 1), 'SAME', tf.nn.relu, 'layer1')
+            layer1 = conv(xs, 64, (3, 3), (1, 1), 'SAME', tf.nn.relu, 'layer1')
 
-            layer2 = self.conv(layer1, 128, (3, 3), (2, 2), 'SAME', tf.nn.relu, 'layer2')
+            layer2 = conv(layer1, 128, (3, 3), (2, 2), 'SAME', tf.nn.relu, 'layer2')
 
             top_conv = tf.identity(layer2, 'top_conv')
 

@@ -42,19 +42,36 @@ def images_augmentation(images, phase_train):
     return images
 
 
+def generator(data, labels, batch_size=32):
+    """
+    usage:
+        gen = generator(x_train, y_train)
+        next(gen)
+    """
+
+    idx = 0
+    num_step = len(data) // batch_size
+    indexes = np.arange(0, len(data))
+    while True:
+        if idx >= num_step - 1:
+            npr.shuffle(indexes)
+            idx = 0
+        else:
+            idx += 1
+        batch_index = indexes[idx * batch_size:
+                              (idx + 1) * batch_size]
+
+        batch_data = data[batch_index]
+        batch_label = labels[batch_index]
+
+        yield batch_data, batch_label
+
+
 class Cifar10:
     """ wrapper class for keras.dataset.cifar10
-
-    usage:
-        data = Cifar10()
-        gen = Cifar10.generator(data.x_train, data.y_train)
-        next(gen)
-
     """
 
     def __init__(self):
-        super(Cifar10, self).__init__()
-
         from keras.datasets import cifar10
         (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
@@ -76,22 +93,3 @@ class Cifar10:
             return self.x_shape
         elif item == 'y_shape':
             return self.y_shape
-
-    @classmethod
-    def generator(cls, data, labels, batch_size=32):
-        idx = 0
-        num_step = len(data) // batch_size
-        indexes = np.arange(0, len(data))
-        while True:
-            if idx >= num_step - 1:
-                npr.shuffle(indexes)
-                idx = 0
-            else:
-                idx += 1
-            batch_index = indexes[idx * batch_size:
-                                  (idx + 1) * batch_size]
-
-            batch_data = data[batch_index]
-            batch_label = labels[batch_index]
-
-            yield batch_data, batch_label

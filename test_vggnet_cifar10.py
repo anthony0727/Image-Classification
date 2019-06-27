@@ -43,7 +43,7 @@ def train(network, data, optimizer='momentum'):
 
         save_root_folder = os.path.join(ROOT, 'save_root_folder')
 
-        train_generator = Cifar10.generator(data.x_train, data.y_train, batch_size)
+        train_generator = generator(data.y_train, batch_size)
         for i in range(epochs):
             batch_xs, batch_ys = next(train_generator)
             feeds = {'xs': batch_xs, 'ys': batch_ys, 'lr': learning_rate}
