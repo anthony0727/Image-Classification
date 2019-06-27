@@ -3,9 +3,6 @@ import pandas as pd
 import numpy as np
 import numpy.random as npr
 
-import cv2
-import matplotlib.pyplot as plt
-
 from ABCNet import Network
 
 he_init = tf.initializers.he_uniform()
@@ -44,33 +41,25 @@ def inception_module(prev_layer,
     return out
 
 
-def auxiliary_network(block_4a, block_4d):
-    with tf.variable_scope('auxiliary_network_4a'):
-        avg_pool = tf.layers.AveragePooling2D((5, 5), (3, 3))(block_4a)
-        conv = tf.layers.Conv2D(128, (1, 1), kernel_initializer=he_init, activation=tf.nn.relu, name='1x1')(
-            avg_pool)
+def auxiliary_network(block, name):
+    with tf.variable_scope('auxiliary_network_' + name):
+        avg_pool = tf.layers.AveragePooling2D((5, 5), (3, 3))(block)
+        conv = tf.layers.Conv2D(128, (1, 1), kernel_initializer=he_init, activation=tf.nn.relu, name='1x1')(avg_pool)
 
         fc = tf.layers.Flatten()(conv)
         fc = tf.layers.Dense(1024, kernel_initializer=he_init, activation=tf.nn.relu)(fc)
         fc = tf.layers.Dropout(0.7)(fc)
-        aux_logit_4a = tf.layers.Dense(1000, kernel_initializer=xavier_init)(fc)
+        aux_logit = tf.layers.Dense(1000, kernel_initializer=xavier_init)(fc)
 
-    with tf.variable_scope('auxiliary_network_4d'):
-        avg_pool = tf.layers.AveragePooling2D((5, 5), (3, 3))(block_4d)
-        conv = tf.layers.Conv2D(128, (1, 1), kernel_initializer=he_init, activation=tf.nn.relu, name='1x1')(
-            avg_pool)
-
-        fc = tf.layers.Flatten()(conv)
-        fc = tf.layers.Dense(1024, kernel_initializer=he_init, activation=tf.nn.relu)(fc)
-        fc = tf.layers.Dropout(0.7)(fc)
-        aux_logit_4d = tf.layers.Dense(1000, kernel_initializer=xavier_init)(fc)
-
-    return aux_logit_4a, aux_logit_4d
+    return aux_logit
 
 
 class GoogLeNet(Network):
     def __init__(self):
         super(GoogLeNet, self).__init__()
+
+        self.input_shape = None
+        self.num_class = 0
 
         # additional attrs
         self.aux_4a_loss, self.aux_4d_loss = None, None
@@ -79,30 +68,14 @@ class GoogLeNet(Network):
         # input_shape = (224, 224, 3)
         # num_classes = 1000
 
-    def attach_placeholders(self, shape):
+    def attach_placeholders(self):
         with self.graph.as_default():
-            images = tf.placeholder(tf.float32, (None, *shape), name='images')
+            images = tf.placeholder(tf.float32, (None, *self.input_shape), name='images')
             image_mean = tf.constant([123.68, 116.779, 103.939])
 
             self.xs = images - image_mean
             self.ys = tf.placeholder(tf.int32, (None,), name='labels')
             self.lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
-
-    def attach_summary(self):
-        with self.graph.as_default():
-            # for metric in self.metrics:
-            #     tf.summary.scalar(*metric)
-            tf.summary.scalar('top5_accuracy', top_5)
-            tf.summary.scalar('top1_accuracy', top_1)
-            tf.summary.scalar('loss', self.loss)
-        tf.summary.merge_all(name='merge_all')
-
-    def build(self, shape):
-        self.attach_placeholders(shape)
-        self.attach_layers()
-        self.attach_loss()
-        self.attach_metric()
-        self.attach_summary()
 
     def train(self, optimizer):
         pass
@@ -134,6 +107,8 @@ class GoogLeNet(Network):
             block_5a = inception_module(pool4, 256, 160, 320, 32, 128, 128, 'inception_5a')
             block_5b = inception_module(block_5a, 384, 192, 384, 48, 128, 128, 'inception_5b')
 
+            self.aux_logit_4a, self.aux_logit_4d = auxiliary_network(block_4a, '4a'), auxiliary_network(block_4d, '4d')
+
     def attach_loss(self):
         with self.graph.as_default():
             with tf.variable_scope('losses'):
@@ -159,6 +134,15 @@ class GoogLeNet(Network):
                 tf.identity(top_5, 'top5_acc')
                 tf.identity(top_1, 'top1_acc')
                 tf.identity(metric_loss, 'metric_loss')
+
+    def attach_summary(self):
+        with self.graph.as_default():
+            # for metric in self.metrics:
+            #     tf.summary.scalar(*metric)
+            tf.summary.scalar('top5_accuracy', top_5)
+            tf.summary.scalar('top1_accuracy', top_1)
+            tf.summary.scalar('loss', self.loss)
+        tf.summary.merge_all(name='merge_all')
 
     # with self.graph.as_default():
     #

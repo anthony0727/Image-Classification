@@ -35,16 +35,6 @@ class VGGNet(Network):
         self.input_shape = None
         self.num_class = 0
 
-    def build(self, input_shape, num_class):
-        self.input_shape = input_shape
-        self.num_class = num_class
-
-        self.attach_placeholders()
-        self.attach_layers()
-        self.attach_loss()
-        self.attach_metric()
-        self.attach_summary()
-
     def transfer(self, network):
         pass
 
@@ -54,7 +44,7 @@ class VGGNet(Network):
     def attach_placeholders(self):
         with self.graph.as_default():
             # define input placeholder
-            self.xs = tf.placeholder(tf.float32, (None, *self.shape), name='xs')
+            self.xs = tf.placeholder(tf.float32, (None, *self.input_shape), name='xs')
             self.ys = tf.placeholder(tf.float32, (None,), name='ys')
             self.lr = tf.placeholder(tf.float32, (), name='lr')
             self.is_train = tf.placeholder(tf.bool, name='phase_train')
@@ -83,16 +73,13 @@ class VGGNet(Network):
 
     def attach_loss(self):
         with self.graph.as_default():
-            l2_reg = tf.reduce_sum(
-                [tf.nn.l2_loss(var) for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)])  # fix me #
+            l2_reg = tf.reduce_sum([tf.nn.l2_loss(var) for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)])
             l2_beta = 0.01
 
             loss = tf.nn.softmax_cross_entropy_with_logits_v2(self.ys, self.logits)
             loss = tf.reduce_mean(loss) + (l2_beta * l2_reg)
 
-            self.loss = loss
-
-            tf.identity(loss, 'loss')
+            self.loss = tf.identity(loss, 'loss')
             tf.add_to_collection(tf.GraphKeys.LOSSES, loss)
 
     def attach_metric(self):

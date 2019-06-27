@@ -4,15 +4,35 @@ import tensorflow as tf
 
 class Network(ABC):
     def __init__(self):
-        self.xs, self.ys, self.lr, \
-        self.loss, self.accuracy, \
-        self.logits, self.is_train = \
-            None, None, None, None, None, None, None
+        # tensors
+        self.xs = None
+        self.ys = None
+        self.lr = None
+        self.loss = None
+        self.accuracy = None
+        self.logits = None
+        self.is_train = None
+
+        # tuple
+        self.input_shape = None
+
+        # integer
+        self.num_class = 0
 
         self.graph = tf.Graph()
         self.saver = tf.train.Saver()
         self.train_writer = tf.summary.FileWriter('./train_tb')
         self.test_writer = tf.summary.FileWriter('./test_tb')
+
+    def build(self, input_shape, num_class):
+        self.input_shape = input_shape
+        self.num_class = num_class
+
+        self.attach_placeholders()
+        self.attach_layers()
+        self.attach_loss()
+        self.attach_metric()
+        self.attach_summary()
 
     @abstractmethod
     def attach_placeholders(self):
@@ -32,10 +52,6 @@ class Network(ABC):
 
     @abstractmethod
     def attach_summary(self):
-        pass
-
-    @abstractmethod
-    def build(self):
         pass
 
     @abstractmethod
