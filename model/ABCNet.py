@@ -4,7 +4,10 @@ import tensorflow as tf
 
 class Network(ABC):
     def __init__(self):
-        self.xs, self.ys, self.lr, self.loss, self.accuracy, self.logits = None, None, None, None, None, None
+        self.xs, self.ys, self.lr, \
+        self.loss, self.accuracy, \
+        self.logits, self.is_train = \
+            None, None, None, None, None, None, None
 
         self.graph = tf.Graph()
         self.saver = tf.train.Saver()

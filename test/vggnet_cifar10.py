@@ -6,7 +6,7 @@ import gc
 
 import os
 from vggnet import VGGNet
-from data import Cifar10
+from data import Cifar10, generator
 
 import tensorflow as tf
 import numpy as np
@@ -30,9 +30,9 @@ def train(network, data, optimizer='momentum'):
     graph = network.graph
 
     with tf.Session(graph) as sess:
-        lr, loss, acc, merged = graph.get_tensor_by_name('lr:0'), \
-                                graph.get_tensor_by_name('loss:0'), \
-                                graph.get_tensor_by_name('accuracy:0'), \
+        lr, loss, acc, merged = graph.get_tensor_by_name('lr:0'),
+                                graph.get_tensor_by_name('loss:0'),
+                                graph.get_tensor_by_name('accuracy:0'),
                                 graph.get_tensor_by_name('merge_all:0')
 
         optimizer = OPTIMIZERS[optimizer]
