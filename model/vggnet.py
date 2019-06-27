@@ -60,9 +60,8 @@ class VGGNet(Network):
     def attach_layers(self):
         layer = self.xs
 
-        blocks = vgg_config[self.n_layer]
-        n_filters = filters_config
-        for ith_block, (n_layers, filters) in enumerate(zip(blocks, n_filters), start=1):
+        config_zip = zip(vgg_config[self.n_layer], filters_config)
+        for ith_block, (n_layers, filters) in enumerate(config_zip, start=1):
             with tf.variable_scope('VGGBLOCK-{}'.format(ith_block)):
                 for ith_layer in range(1, n_layers + 1):
                     layer = conv(layer, filters, name='conv{}'.format(ith_layer))
