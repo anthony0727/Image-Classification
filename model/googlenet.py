@@ -31,8 +31,7 @@ def inception_module(prev_layer,
         out3 = tf.layers.Conv2D(five_conv_filters, (5, 5), padding='SAME', kernel_initializer=he_init,
                                 activation=tf.nn.relu, name='5x5_conv')(out3)
 
-        out4 = tf.layers.MaxPooling2D((3, 3), (1, 1), padding='SAME', kernel_initializer=he_init,
-                                      activation=tf.nn.relu, name='3x3_pool')(prev_layer)
+        out4 = tf.layers.MaxPooling2D((3, 3), (1, 1), padding='SAME', name='3x3_pool')(prev_layer)
         out4 = tf.layers.Conv2D(after_pool_filters, (5, 5), padding='SAME', kernel_initializer=he_init,
                                 activation=tf.nn.relu, name='after_pool')(out4)
 
@@ -68,7 +67,6 @@ class GoogLeNet(Network):
         self.aux_logit_4a, self.aux_logit_4d = None, None
 
     def attach_placeholders(self):
-
         images = tf.placeholder(tf.float32, (None, *self.input_shape), name='images')
         image_mean = tf.constant([123.68, 116.779, 103.939])
 
@@ -79,11 +77,10 @@ class GoogLeNet(Network):
     def attach_layers(self):
         he_init = tf.initializers.he_uniform()
 
-
-        conv1 = tf.layers.Conv2D(64, (7, 7), (2, 2), padding='SAME', kernel_initializer=he_init, name='7x7_conv')(x)
+        conv1 = tf.layers.Conv2D(64, (7, 7), (2, 2), padding='SAME', kernel_initializer=he_init, name='7x7_conv')(self.xs)
         pool1 = tf.layers.MaxPooling2D((3, 3), (2, 2), name='MaxPool_1')(conv1)
-        conv2 = tf.layers.Conv2D(192, (3, 3), padding='SAME', kernel_initializer=he_init, name='3x3_conv')(pool1)
 
+        conv2 = tf.layers.Conv2D(192, (3, 3), padding='SAME', kernel_initializer=he_init, name='3x3_conv')(pool1)
         pool2 = tf.layers.MaxPooling2D((3, 3), (2, 2), name='MaxPool_2')(conv2)
 
         block_3a = inception_module(pool2, 64, 96, 128, 16, 32, 32, 'inception_3a')
@@ -103,7 +100,6 @@ class GoogLeNet(Network):
         self.aux_logit_4a, self.aux_logit_4d = auxiliary_network(block_4a, '4a'), auxiliary_network(block_4d, '4d')
 
     def attach_loss(self):
-
         with tf.variable_scope('losses'):
             loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.logits)
             self.aux_4a_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4a)
@@ -111,7 +107,6 @@ class GoogLeNet(Network):
             self.loss = loss + 0.3 * self.aux_4a_loss + 0.3 * self.aux_4d_loss
 
     def attach_metric(self):
-
         with tf.variable_scope('metrics'):
             top5, top5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=5), tf.float32) * 100)
 
@@ -129,10 +124,16 @@ class GoogLeNet(Network):
             tf.identity(metric_loss, 'metric_loss')
 
     def attach_summary(self):
-
         # for metric in self.metrics:
         #     tf.summary.scalar(*metric)
         tf.summary.scalar('top5_accuracy', self.top5_accuracy)
         tf.summary.scalar('top1_accuracy', self.top1_accuracy)
         tf.summary.scalar('loss', self.loss)
         tf.summary.merge_all(name='merge_all')
+
+    def transfer(self):
+        pass
+
+
+net = GoogLeNet()
+net.build((32, 32, 3), 10)
