@@ -2,6 +2,7 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 import numpy.random as npr
+from tqdm import tqdm
 
 from ABCNet import Network
 
@@ -40,19 +41,6 @@ def inception_module(prev_layer,
     return out
 
 
-def auxiliary_network(block, name):
-    with tf.variable_scope('auxiliary_network_' + name):
-        avg_pool = tf.layers.AveragePooling2D((5, 5), (3, 3))(block)
-        conv = tf.layers.Conv2D(128, (1, 1), kernel_initializer=he_init, activation=tf.nn.relu, name='1x1')(avg_pool)
-
-        fc = tf.layers.Flatten()(conv)
-        fc = tf.layers.Dense(1024, kernel_initializer=he_init, activation=tf.nn.relu)(fc)
-        fc = tf.layers.Dropout(0.7)(fc)
-        aux_logit = tf.layers.Dense(1000, kernel_initializer=xavier_init)(fc)
-
-    return aux_logit
-
-
 class GoogLeNet(Network):
     def __init__(self):
         super(GoogLeNet, self).__init__()
@@ -68,36 +56,57 @@ class GoogLeNet(Network):
 
     def attach_placeholders(self):
         images = tf.placeholder(tf.float32, (None, *self.input_shape), name='images')
-        image_mean = tf.constant([123.68, 116.779, 103.939])
+        image_mean = tf.constant([123.68, 116.779, 103.939], tf.float32)
 
         self.xs = images - image_mean
         self.ys = tf.placeholder(tf.int32, (None,), name='labels')
         self.lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
 
+    def auxiliary_network(self, block, name):
+        with tf.variable_scope('auxiliary_network_' + name):
+            # avg_pool = tf.layers.AveragePooling2D((5, 5), (3, 3))(block)
+            conv = tf.layers.Conv2D(64, (1, 1), kernel_initializer=he_init, activation=tf.nn.relu, name='1x1')(
+                block)
+
+            fc = tf.layers.Flatten()(conv)
+            fc = tf.layers.Dense(512, kernel_initializer=he_init, activation=tf.nn.relu)(fc)
+            fc = tf.layers.Dropout(0.7)(fc)
+            aux_logit = tf.layers.Dense(self.n_class, kernel_initializer=xavier_init)(fc)
+
+        return aux_logit
+
     def attach_layers(self):
         he_init = tf.initializers.he_uniform()
 
-        conv1 = tf.layers.Conv2D(64, (7, 7), (2, 2), padding='SAME', kernel_initializer=he_init, name='7x7_conv')(self.xs)
+        conv1 = tf.layers.Conv2D(32, (3, 3), (1, 1),
+                                 padding='SAME', kernel_initializer=he_init, name='3x3_conv_1')(self.xs)
         pool1 = tf.layers.MaxPooling2D((3, 3), (2, 2), name='MaxPool_1')(conv1)
 
-        conv2 = tf.layers.Conv2D(192, (3, 3), padding='SAME', kernel_initializer=he_init, name='3x3_conv')(pool1)
+        conv2 = tf.layers.Conv2D(96, (3, 3), padding='SAME', kernel_initializer=he_init, name='3x3_conv_2')(pool1)
         pool2 = tf.layers.MaxPooling2D((3, 3), (2, 2), name='MaxPool_2')(conv2)
 
-        block_3a = inception_module(pool2, 64, 96, 128, 16, 32, 32, 'inception_3a')
-        block_3b = inception_module(block_3a, 128, 128, 192, 32, 96, 64, 'inception_3b')
+        block_3a = inception_module(pool2, 32, 48, 64, 8, 16, 16, 'inception_3a')
+        block_3b = inception_module(block_3a, 64, 64, 96, 16, 48, 32, 'inception_3b')
         pool3 = tf.layers.MaxPooling2D((3, 3), (2, 2), padding='SAME', name='MaxPool_3')(block_3b)
 
-        block_4a = inception_module(pool3, 192, 96, 208, 16, 48, 64, 'inception_4a')
-        block_4b = inception_module(block_4a, 160, 112, 224, 24, 64, 64, 'inception_4b')
-        block_4c = inception_module(block_4b, 128, 128, 256, 24, 64, 64, 'inception_4c')
-        block_4d = inception_module(block_4c, 112, 144, 288, 32, 64, 64, 'inception_4d')
-        block_4e = inception_module(block_4d, 256, 160, 320, 32, 128, 128, 'inception_4e')
+        block_4a = inception_module(pool3, 96, 48, 104, 8, 24, 32, 'inception_4a')
+        block_4b = inception_module(block_4a, 80, 56, 112, 12, 32, 32, 'inception_4b')
+        block_4c = inception_module(block_4b, 64, 64, 128, 12, 32, 32, 'inception_4c')
+        block_4d = inception_module(block_4c, 56, 72, 144, 16, 32, 32, 'inception_4d')
+        block_4e = inception_module(block_4d, 128, 80, 160, 16, 64, 64, 'inception_4e')
         pool4 = tf.layers.MaxPooling2D((3, 3), (2, 2), padding='SAME', name='MaxPool_4')(block_4e)
 
-        block_5a = inception_module(pool4, 256, 160, 320, 32, 128, 128, 'inception_5a')
-        block_5b = inception_module(block_5a, 384, 192, 384, 48, 128, 128, 'inception_5b')
+        block_5a = inception_module(pool4, 128, 80, 160, 16, 64, 64, 'inception_5a')
+        block_5b = inception_module(block_5a, 192, 96, 192, 24, 64, 64, 'inception_5b')
 
-        self.aux_logit_4a, self.aux_logit_4d = auxiliary_network(block_4a, '4a'), auxiliary_network(block_4d, '4d')
+        layer = tf.layers.Flatten()(block_5b)
+        layer = tf.layers.Dropout(0.4)(layer, training=self.is_train)
+        layer = tf.layers.Dense(512, kernel_initializer=he_init, activation=tf.nn.relu)(layer)
+        self.logits = tf.layers.Dense(self.n_class, kernel_initializer=xavier_init, name='logits')(layer)
+        y_pred = tf.nn.softmax(self.logits)
+
+        self.aux_logit_4a, self.aux_logit_4d = \
+            self.auxiliary_network(block_4a, '4a'), self.auxiliary_network(block_4d, '4d')
 
     def attach_loss(self):
         with tf.variable_scope('losses'):
@@ -133,7 +142,3 @@ class GoogLeNet(Network):
 
     def transfer(self):
         pass
-
-
-net = GoogLeNet()
-net.build((32, 32, 3), 10)

@@ -4,26 +4,26 @@ import tensorflow as tf
 
 class Network(ABC):
     def __init__(self):
-        # tensors
-        self.xs = None
-        self.ys = None
-        self.lr = None
-        self.loss = None
-        self.accuracy = None
-        self.logits = None
-        self.is_train = None
-        self.saver = None
-
-        # tuple
-        self.input_shape = None
-
-        # integer
-        self.n_class = 0
-
         self.graph = tf.Graph()
 
-        self.train_writer = tf.summary.FileWriter('./train_tb')
-        self.test_writer = tf.summary.FileWriter('./test_tb')
+        with self.graph.as_default():
+            # tensors
+            self.xs = None
+            self.ys = None
+            self.lr = None
+            self.loss = None
+            self.accuracy = None
+            self.logits = None
+            self.is_train = tf.placeholder_with_default(True, None)
+            self.saver = None
+
+            # tuple
+            self.input_shape = None
+
+            # integer
+            self.n_class = 0
+            self.train_writer = tf.summary.FileWriter('./train_tb')
+            self.test_writer = tf.summary.FileWriter('./test_tb')
 
     def build(self, input_shape, num_class):
         self.input_shape = input_shape

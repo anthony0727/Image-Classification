@@ -6,7 +6,7 @@ import gc
 
 import os
 from vggnet import VGGNet
-from data import Cifar10, generator
+from data import Cifar, generator
 
 import tensorflow as tf
 import numpy as np

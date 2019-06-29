@@ -36,9 +36,9 @@ def image_augmentation(image, is_training, crop_h, crop_w):
     return image
 
 
-def images_augmentation(images, phase_train):
-    crop_h, crop_w = list(map(int, images.get_shape()[1:3]))
-    images = tf.map_fn(lambda image: image_augmentation(image, phase_train, crop_h, crop_w), images)
+def images_augmentation(images, is_train):
+    crop_h, crop_w = list(map(int, images.shape[1:3]))
+    images = tf.map_fn(lambda image: image_augmentation(image, is_train, crop_h, crop_w), images)
     return images
 
 
@@ -67,17 +67,27 @@ def generator(data, labels, batch_size=32):
         yield batch_data, batch_label
 
 
-class Cifar10:
+class Cifar:
     """ wrapper class for keras.dataset.cifar10
     """
 
-    def __init__(self):
-        from keras.datasets import cifar10
-        (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    def __init__(self, n_class):
+        if n_class == 10:
+            from keras.datasets import cifar10
+            cifar = cifar10
+        elif n_class == 100:
+            from keras.datasets import cifar100
+            cifar = cifar100
+
+        self.n_class = n_class
+
+        (x_train, y_train), (x_test, y_test) = cifar.load_data()
+
 
         # minmax normalize
-        self.x_train, self.x_test = x_train / 255, x_test / 255
+        self.x_train, self.x_test = (x_train / 255.).astype(np.float32), (x_test / 255.).astype(np.float32)
         self.y_train, self.y_test = y_train.squeeze(), y_test.squeeze()
+        print(self.x_train.dtype, self.x_test.dtype)
 
         # keras.dataset guarantees data shape consistency
         self.x_shape = self.x_train.shape[1:]
