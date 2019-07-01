@@ -94,10 +94,3 @@ class VGGNet(Network):
         tf.summary.scalar('accuracy', self.accuracy)
         tf.summary.scalar('loss', self.loss)
         tf.summary.merge_all(name='merge_all')
-
-
-net = VGGNet(13)
-net.build((32, 32, 3), 10)
-
-for var in net.graph.get_collection('variables'):
-    print(var)
