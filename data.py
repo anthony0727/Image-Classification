@@ -103,3 +103,8 @@ class Cifar:
             return self.x_shape
         elif item == 'y_shape':
             return self.y_shape
+
+    def __len__(self):
+        return len(self.x_train)
+
+

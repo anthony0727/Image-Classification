@@ -142,3 +142,5 @@ class GoogLeNet(Network):
 
     def transfer(self):
         pass
+
+    tf.layers.MaxPooling2D
