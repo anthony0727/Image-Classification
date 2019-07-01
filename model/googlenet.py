@@ -4,7 +4,7 @@ import numpy as np
 import numpy.random as npr
 from tqdm import tqdm
 
-from ABCNet import Network
+from model.ABCNet import Network
 
 he_init = tf.initializers.he_uniform()
 xavier_init = tf.initializers.glorot_normal()

@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tqdm import tqdm
 
-from googlenet import GoogLeNet
+from model.googlenet import GoogLeNet
 
 net = GoogLeNet()
 net.build((32, 32, 3), 100)

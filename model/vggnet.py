@@ -6,8 +6,8 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import os
 
-from ABCNet import Network
-from data import Cifar10
+from model.ABCNet import Network
+from data import Cifar
 
 N_VGGBLOCK = 5
 

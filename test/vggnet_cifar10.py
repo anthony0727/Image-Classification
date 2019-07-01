@@ -5,7 +5,7 @@ this file is to be presented in .ipynb format
 import gc
 
 import os
-from vggnet import VGGNet
+from model.vggnet import VGGNet
 from data import Cifar, generator
 
 import tensorflow as tf
