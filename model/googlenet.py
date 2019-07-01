@@ -138,7 +138,7 @@ class GoogLeNet(Network):
         tf.summary.scalar('top5_accuracy', self.top5_accuracy)
         tf.summary.scalar('top1_accuracy', self.top1_accuracy)
         tf.summary.scalar('loss', self.loss)
-        tf.summary.merge_all(name='merge_all')
+        self.merge_all = tf.summary.merge_all(name='merge_all')
 
     def transfer(self):
         pass
