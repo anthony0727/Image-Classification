@@ -40,9 +40,6 @@ class VGGNet(Network):
     def __init__(self, n_layer=11):
         super(VGGNet, self).__init__()
 
-        self.input_shape = None
-        self.n_class = 0
-
         if n_layer not in vgg_config.keys():
             raise ValueError("Unrecognizable VGGNet. Only VGG11, VGG13, VGG16, VGG19 are available")
 

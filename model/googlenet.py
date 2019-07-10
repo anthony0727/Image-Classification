@@ -45,10 +45,6 @@ class GoogLeNet(Network):
     def __init__(self):
         super(GoogLeNet, self).__init__()
 
-        # input_shape = (224, 224, 3)
-        # num_classes = 1000
-        self.input_shape = None
-
         # additional attrs
         self.top5_accuracy, self.top1_accuracy = None, None
         self.aux_4a_loss, self.aux_4d_loss = None, None
