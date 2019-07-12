@@ -31,7 +31,7 @@ def train(network, data, optimizer='momentum'):
 
 
 if __name__ == '__main__':
-    data = Cifar10()  # data class
+    data = Cifar(10)  # data class
 
     net = VGGNet()
 
