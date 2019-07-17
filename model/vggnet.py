@@ -33,6 +33,15 @@ def conv(prev_layer, units, name):
 
 def fc(flat_layer, units, activation, initializer, layer_name):
     layer = tf.layers.Dense(units, activation, kernel_initializer=initializer, name=layer_name)(flat_layer)
+
+    return layer
+
+
+def vgg_block(filters, ith_block, layer, n_layers):
+    for ith_layer in range(1, n_layers + 1):
+        layer = conv(layer, filters, name='conv{}'.format(ith_layer))
+    layer = tf.layers.MaxPooling2D((2, 2), (2, 2), name='MaxPool-{}'.format(ith_block))(layer)
+
     return layer
 
 
@@ -60,9 +69,7 @@ class VGGNet(Network):
         config_zip = zip(vgg_config[self.n_layer], filters_config)
         for ith_block, (n_layers, filters) in enumerate(config_zip, start=1):
             with tf.variable_scope('VGGBLOCK-{}'.format(ith_block)):
-                for ith_layer in range(1, n_layers + 1):
-                    layer = conv(layer, filters, name='conv{}'.format(ith_layer))
-                layer = tf.layers.MaxPooling2D((2, 2), (2, 2), name='MaxPool-{}'.format(ith_block))(layer)
+                layer = vgg_block(filters, ith_block, layer, n_layers)
 
         with tf.variable_scope('FC'):
             layer = tf.layers.Flatten()(layer)
@@ -70,8 +77,8 @@ class VGGNet(Network):
             layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
             logits = tf.layers.Dense(self.n_class)(layer)
 
-        self.logits = tf.identity(logits, name='logits')
-        pred = tf.nn.softmax(logits, name='predictions')
+        tf.identity(logits, name='logits')
+        tf.nn.softmax(logits, name='y_pred')
 
     def attach_loss(self):
         l2_reg = tf.reduce_sum([tf.nn.l2_loss(var) for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)])
@@ -81,11 +88,11 @@ class VGGNet(Network):
         loss = tf.reduce_mean(loss) + (l2_beta * l2_reg)
 
         self.loss = tf.identity(loss, 'loss')
-        tf.add_to_collection(tf.GraphKeys.LOSSES, loss)
+        tf.add_to_collection(tf.GraphKeys.LOSSES, loss)  # must add to loss collection manually
 
     def attach_metric(self):
         logits_cls = tf.cast(tf.argmax(self.logits, axis=1), tf.int32)
-        self.accuracy, _ = tf.metrics.accuracy(self.ys, logits_cls, name='accuracy')
+        tf.metrics.accuracy(self.ys, logits_cls, name='accuracy')
 
     def attach_summary(self):
         tf.summary.scalar('accuracy', self.accuracy)

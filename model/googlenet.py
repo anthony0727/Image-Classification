@@ -99,33 +99,32 @@ class GoogLeNet(Network):
         layer = tf.layers.Dropout(0.4)(layer, training=self.is_train)
         layer = tf.layers.Dense(512, kernel_initializer=he_init, activation=tf.nn.relu)(layer)
         self.logits = tf.layers.Dense(self.n_class, kernel_initializer=xavier_init, name='logits')(layer)
-        y_pred = tf.nn.softmax(self.logits)
+        tf.nn.softmax(self.logits, name='y_pred')
 
         self.aux_logit_4a, self.aux_logit_4d = \
             self.auxiliary_network(block_4a, '4a'), self.auxiliary_network(block_4d, '4d')
 
     def attach_loss(self):
         with tf.variable_scope('losses'):
-            loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.logits)
-            self.aux_4a_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4a)
-            self.aux_4d_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4d)
-            self.loss = loss + 0.3 * self.aux_4a_loss + 0.3 * self.aux_4d_loss
+            local_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.logits)
+            aux_4a_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4a, name='aux_4a_loss')
+            aux_4d_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4d, name='aux_4d_loss')
+            tf.indentity(local_loss + 0.3 * aux_4a_loss + 0.3 * aux_4d_loss, 'loss')
 
     def attach_metric(self):
         with tf.variable_scope('metrics'):
             top5, top5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=5), tf.float32) * 100)
-
             top1, top1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=1), tf.float32) * 100)
 
             metric_loss, metric_loss_op = tf.metrics.mean(self.loss)
 
-            metric_init_op = tf.group(
+            tf.group(
                 [var.initializer for var in self.graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)],
                 name='metric_init_op')
-            metric_update_op = tf.group([top5_op, top1_op, metric_loss_op], name='metric_update_op')
+            tf.group([top5_op, top1_op, metric_loss_op], name='metric_update_op')
 
-            self.top5_accuracy = tf.identity(top5, 'top5_acc')
-            self.top1_accuracy = tf.identity(top1, 'top1_acc')
+            tf.identity(top5, 'top5_acc')
+            tf.identity(top1, 'top1_acc')
             tf.identity(metric_loss, 'metric_loss')
 
     def attach_summary(self):
@@ -134,7 +133,7 @@ class GoogLeNet(Network):
         tf.summary.scalar('top5_accuracy', self.top5_accuracy)
         tf.summary.scalar('top1_accuracy', self.top1_accuracy)
         tf.summary.scalar('loss', self.loss)
-        self.merge_all = tf.summary.merge_all(name='merge_all')
+        tf.summary.merge_all(name='merge_all')
 
     def transfer(self):
         pass
