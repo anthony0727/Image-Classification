@@ -54,14 +54,11 @@ class VGGNet(Network):
 
         self.n_layer = n_layer
 
-    def transfer(self, network):
-        pass
-
     def attach_placeholders(self):
         self.xs = tf.placeholder(tf.float32, (None, *self.input_shape), name='xs')
-        self.ys = tf.placeholder(tf.float32, (None,), name='ys')
+        self.ys = tf.placeholder(tf.int32, (None,), name='ys')
         self.lr = tf.placeholder(tf.float32, (), name='lr')
-        self.is_train = tf.placeholder(tf.bool, name='phase_train')
+        self.is_train = tf.placeholder(tf.bool, name='is_train')
 
     def attach_layers(self):
         layer = self.xs
@@ -75,26 +72,48 @@ class VGGNet(Network):
             layer = tf.layers.Flatten()(layer)
             layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
             layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
+            layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
+            layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
             logits = tf.layers.Dense(self.n_class)(layer)
 
-        tf.identity(logits, name='logits')
-        tf.nn.softmax(logits, name='y_pred')
+        self.logits = tf.identity(logits, name='logits')
+        self.y_pred = tf.nn.softmax(logits, name='y_pred')
+
+        return layer
 
     def attach_loss(self):
         l2_reg = tf.reduce_sum([tf.nn.l2_loss(var) for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)])
         l2_beta = 0.01
 
-        loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.ys, logits=self.logits)
+        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.ys, logits=self.logits)
         loss = tf.reduce_mean(loss) + (l2_beta * l2_reg)
 
         self.loss = tf.identity(loss, 'loss')
         tf.add_to_collection(tf.GraphKeys.LOSSES, loss)  # must add to loss collection manually
 
     def attach_metric(self):
-        logits_cls = tf.cast(tf.argmax(self.logits, axis=1), tf.int32)
-        tf.metrics.accuracy(self.ys, logits_cls, name='accuracy')
+        with tf.variable_scope('metrics'):
+            logits_cls = tf.cast(tf.argmax(self.logits, axis=1), tf.int32)
+            self.accuracy = tf.metrics.accuracy(self.ys, logits_cls, name='accuracy')
 
-    def attach_summary(self):
-        tf.summary.scalar('accuracy', self.accuracy)
-        tf.summary.scalar('loss', self.loss)
-        tf.summary.merge_all(name='merge_all')
+            top5, top5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.y_pred, self.ys, k=5), tf.float32) * 100)
+            top1, top1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.y_pred, self.ys, k=1), tf.float32) * 100)
+            metric_loss, loss_op = tf.metrics.mean(self.loss)
+
+            metric_init_op = tf.group(
+                [var.initializer for var in self.graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)],
+                name='metric_init_op')
+            metric_update_op = tf.group([top5_op, top1_op, loss_op], name='metric_update_op')
+
+            top5 = tf.identity(top5, 'top5_accuracy')
+            top1 = tf.identity(top1, 'top1_accuracy')
+            tf.identity(metric_loss, 'metric_loss')
+
+            self.attach_summary(top5, top1, metric_loss)
+
+    def attach_summary(self, top5, top1, metric_loss):
+        print(tf.GraphKeys.METRIC_VARIABLES)
+        tf.summary.scalar('top5_tb', top5)
+        tf.summary.scalar('top1_tb', top1)
+        tf.summary.scalar('loss_tb', metric_loss)
+        merged = tf.summary.merge_all(name='merge_all')

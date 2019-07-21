@@ -14,16 +14,14 @@ class Network(ABC):
             self.loss = None
             self.accuracy = None
             self.logits = None
+            self.y_pred = None
             self.is_train = tf.placeholder_with_default(True, None)
-            self.saver = None
 
             # tuple
             self.input_shape = None
 
             # integer
             self.n_class = 0
-            self.train_writer = tf.summary.FileWriter('./train_tb')
-            self.test_writer = tf.summary.FileWriter('./test_tb')
 
     def build(self, input_shape, num_class):
         self.input_shape = input_shape
@@ -34,11 +32,20 @@ class Network(ABC):
             self.attach_layers()
             self.attach_loss()
             self.attach_metric()
-            self.attach_summary()
-            self.saver = tf.train.Saver()
 
-    def transfer(self):
-        pass
+    def transfer_ops(self, model):
+        ops = []
+
+        with model.graph.as_default():
+            pretrained_weights = tf.get_collection(tf.GraphKeys.WEIGHTS)
+
+        with self.graph.as_default():
+            trainable_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+            for i, layer in enumerate(trainable_variables):
+                op = tf.assign(layer, pretrained_weights[i])
+                ops.append(op)
+
+        return ops
 
     @abstractmethod
     def attach_placeholders(self):
@@ -60,6 +67,3 @@ class Network(ABC):
     def attach_summary(self):
         pass
 
-    @abstractmethod
-    def transfer(self):
-        pass

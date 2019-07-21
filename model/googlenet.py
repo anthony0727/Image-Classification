@@ -72,6 +72,7 @@ class GoogLeNet(Network):
         return aux_logit
 
     def attach_layers(self):
+        print("attach_layers")
         he_init = tf.initializers.he_uniform()
 
         conv1 = tf.layers.Conv2D(32, (3, 3), (1, 1),
@@ -105,13 +106,16 @@ class GoogLeNet(Network):
             self.auxiliary_network(block_4a, '4a'), self.auxiliary_network(block_4d, '4d')
 
     def attach_loss(self):
+        print("attach_loss")
         with tf.variable_scope('losses'):
             local_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.logits)
-            aux_4a_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4a, name='aux_4a_loss')
-            aux_4d_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4d, name='aux_4d_loss')
-            tf.indentity(local_loss + 0.3 * aux_4a_loss + 0.3 * aux_4d_loss, 'loss')
+            aux_4a_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4a)
+            aux_4d_loss = tf.losses.sparse_softmax_cross_entropy(self.ys, self.aux_logit_4d)
+
+            self.loss = tf.identity(local_loss + 0.3 * aux_4a_loss + 0.3 * aux_4d_loss, 'loss')
 
     def attach_metric(self):
+        print("attach_metric")
         with tf.variable_scope('metrics'):
             top5, top5_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=5), tf.float32) * 100)
             top1, top1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.logits, self.ys, k=1), tf.float32) * 100)
@@ -123,15 +127,21 @@ class GoogLeNet(Network):
                 name='metric_init_op')
             tf.group([top5_op, top1_op, metric_loss_op], name='metric_update_op')
 
-            tf.identity(top5, 'top5_acc')
-            tf.identity(top1, 'top1_acc')
+
+            tf.identity(top5, 'top5_accuracy')
+            tf.identity(top1, 'top1_accuracy')
+
             tf.identity(metric_loss, 'metric_loss')
 
     def attach_summary(self):
+        print("attach_summary")
         # for metric in self.metrics:
         #     tf.summary.scalar(*metric)
-        tf.summary.scalar('top5_accuracy', self.top5_accuracy)
-        tf.summary.scalar('top1_accuracy', self.top1_accuracy)
+        names = ['top5_accuracy', 'top1_accuracy']
+
+        metrics = tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)
+        for name, accuracy in zip(names, metrics):
+            tf.summary.scalar(name, accuracy)
         tf.summary.scalar('loss', self.loss)
         tf.summary.merge_all(name='merge_all')
 
