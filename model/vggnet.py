@@ -32,9 +32,9 @@ def conv(layer, units, name):
     return layer
 
 
-def fc(layer):
+def fc(layer, is_train):
     layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
-    layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
+    layer = tf.layers.Dropout(0.5)(layer, training=is_train)
 
     return layer
 
@@ -72,8 +72,8 @@ class VGGNet(Network):
 
         with tf.variable_scope('FC'):
             layer = tf.layers.Flatten()(layer)
-            layer = fc(layer)
-            layer = fc(layer)
+            layer = fc(layer, self.is_train)
+            layer = fc(layer, self.is_train)
             logits = tf.layers.Dense(self.n_class)(layer)
 
         self.logits = tf.identity(logits, name='logits')
