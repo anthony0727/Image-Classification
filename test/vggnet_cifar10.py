@@ -47,7 +47,9 @@ if __name__ == '__main__':
     reconstructed_net.build(*prms)
 
     transfer_ops = reconstructed_net.transfer_ops(pretrained_net)
-    sess.run(transfer_ops)
+    with reconstructed_net.graph.as_default():
+        sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
+        sess.run(transfer_ops)
 
     del pretrained_net, sess
     gc.collect()
