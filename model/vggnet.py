@@ -32,7 +32,7 @@ def conv(layer, units, name):
     return layer
 
 
-def fc(self, layer):
+def fc(layer):
     layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
     layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
 
