@@ -33,18 +33,13 @@ class Network(ABC):
             self.attach_loss()
             self.attach_metric()
 
-    def transfer_ops(self, model):
+    def transfer_ops(self, weights):
         ops = []
-
-        with model.graph.as_default():
-            sess = tf.Session(graph=model.graph)
-            pretrained_weights = sess.run(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
-            print(pretrained_weights)
 
         with self.graph.as_default():
             trainable_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
             for i, layer in enumerate(trainable_variables):
-                op = tf.assign(layer, pretrained_weights[i])
+                op = tf.assign(layer, weights[i])
                 ops.append(op)
 
         return ops
