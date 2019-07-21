@@ -38,7 +38,7 @@ class Network(ABC):
 
         with model.graph.as_default():
             sess = tf.Session(graph=model.graph)
-            pretrained_weights = sess.run(tf.get_collection(tf.GraphKeys.WEIGHTS))
+            pretrained_weights = sess.run(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
             print(pretrained_weights)
 
         with self.graph.as_default():
