@@ -38,15 +38,18 @@ if __name__ == '__main__':
     net.build(*prms)
 
     sess = tf.Session(graph=net.graph)
-    trnr = Trainer(sess, train_set, test_set, LOG_DIR)
-    trnr.n_epoch = 1
-    pretrained_net = trnr.run()
-    # pretrained_net.show() tensorboard
+    with net.graph.as_default():
+        trnr = Trainer(sess, train_set, test_set, LOG_DIR)
+        trnr.n_epoch = 1
+        sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
+        pretrained_net = trnr.run()
+        # pretrained_net.show() tensorboard
 
-    reconstructed_net = VGGNet(13)
-    reconstructed_net.build(*prms)
+        reconstructed_net = VGGNet(13)
+        reconstructed_net.build(*prms)
 
-    transfer_ops = reconstructed_net.transfer_ops(pretrained_net)
+        transfer_ops = reconstructed_net.transfer_ops(pretrained_net)
+
     with reconstructed_net.graph.as_default():
         sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
         sess.run(transfer_ops)
