@@ -44,7 +44,7 @@ class Trainer:
             top1 = graph.get_tensor_by_name('metric/top1_accuracy:0')
             top5 = graph.get_tensor_by_name('metric/top5_accuracy:0')
 
-            global_step = tf.train.get_or_create_global_step(graph)
+            # global_step = tf.train.get_or_create_global_step(graph)
 
             for epoch in range(self.n_epoch):
                 for step in tqdm(range(self.n_data // self.n_batch)):
@@ -70,7 +70,7 @@ class Trainer:
                 print('[{:3d} epoch train top-1 acc : {:2.2f}% | top-5 acc : {:2.2f}%' \
                       .format(epoch, top1_val, top5_val))
                 for summary in summaries:
-                    self.train_writer.add_summary(summary, global_step.eval(sess))
+                    self.train_writer.add_summary(summary, step)
 
                 sess.run(metric_init_op)
                 for step in range(0, len(self.test_set) // 1000):
@@ -88,4 +88,4 @@ class Trainer:
                       .format(epoch, top1_val, top5_val))
 
                 for summary in summaries:
-                    self.test_writer.add_summary(summary, global_step.eval(sess))
+                    self.test_writer.add_summary(summary, step)
