@@ -13,7 +13,7 @@ def feed(x, y, is_train=False):
     feed_dict = {
         'xs:0': x,
         'ys:0': y,
-        'is_train:0' : is_train
+        'is_train:0': is_train
     }
 
     return feed_dict
@@ -65,7 +65,7 @@ class Trainer:
                              feed_dict=feed(batch_x, batch_y))
 
                 summary, top1_val, top5_val = self.sess.run(
-                    tf.get_collection(tf.GraphKeys.SUMMARY_OP) + [top1, top5],
+                    tf.get_collection(tf.GraphKeys.SUMMARIES) + [top1, top5],
                     feed_dict=feed(batch_x, batch_y))
 
                 print('[{:3d} epoch train top-1 acc : {:2.2f}% | top-5 acc : {:2.2f}%' \
@@ -81,7 +81,7 @@ class Trainer:
                              feed_dict=feed(batch_x, batch_y))
 
                 summary, top1_val, top5_val = sess.run(
-                    tf.get_collection(tf.GraphKeys.SUMMARY_OP) + [top1, top5],
+                    tf.get_collection(tf.GraphKeys.SUMMARIES) + [top1, top5],
                     feed_dict=feed(batch_x, batch_y))
 
                 print('[{:3d} epoch test top-1 acc : {:2.2f}% | top-5 acc : {:2.2f}%' \
