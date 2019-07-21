@@ -2,7 +2,7 @@ import os
 
 import tensorflow as tf
 from tqdm import tqdm
-from utils.data_helper import augment_images
+from util.data_helper import augment_images
 
 
 # move to main
