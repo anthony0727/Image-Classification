@@ -26,13 +26,15 @@ vgg_config = {
 filters_config = [64, 128, 256, 512, 512]
 
 
-def conv(prev_layer, units, name):
-    layer = tf.layers.Conv2D(units, (3, 3), (1, 1), 'SAME', activation=tf.nn.relu, name=name)(prev_layer)
+def conv(layer, units, name):
+    layer = tf.layers.Conv2D(units, (3, 3), (1, 1), 'SAME', activation=tf.nn.relu, name=name)(layer)
+
     return layer
 
 
-def fc(flat_layer, units, activation, initializer, layer_name):
-    layer = tf.layers.Dense(units, activation, kernel_initializer=initializer, name=layer_name)(flat_layer)
+def fc(self, layer):
+    layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
+    layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
 
     return layer
 
@@ -70,10 +72,8 @@ class VGGNet(Network):
 
         with tf.variable_scope('FC'):
             layer = tf.layers.Flatten()(layer)
-            layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
-            layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
-            layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
-            layer = tf.layers.Dropout(0.5)(layer, training=self.is_train)
+            layer = fc(layer)
+            layer = fc(layer)
             logits = tf.layers.Dense(self.n_class)(layer)
 
         self.logits = tf.identity(logits, name='logits')
