@@ -77,7 +77,7 @@ class Trainer:
                 sess.run(metric_init_op)
                 for step in range(0, len(self.test_set) // 1000):
                     batch_x, self.test_set.images[step * 1000:(step + 1) * 1000]
-                    batch_y, self.test_set_labels[step * 1000:(step + 1) * 1000].ravel()
+                    batch_y, self.test_set.labels[step * 1000:(step + 1) * 1000].ravel()
 
                     sess.run(metric_update_op,
                              feed_dict=feed(batch_x, batch_y))
