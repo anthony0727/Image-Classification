@@ -92,7 +92,7 @@ class VGGNet(Network):
         tf.add_to_collection(tf.GraphKeys.LOSSES, loss)  # must add to loss collection manually
 
     def attach_metric(self):
-        with tf.variable_scope('metrics'):
+        with tf.variable_scope('metric'):
             logits_cls = tf.cast(tf.argmax(self.logits, axis=1), tf.int32)
             self.accuracy = tf.metrics.accuracy(self.ys, logits_cls, name='accuracy')
 
@@ -100,10 +100,7 @@ class VGGNet(Network):
             top1, top1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.y_pred, self.ys, k=1), tf.float32) * 100)
             metric_loss, loss_op = tf.metrics.mean(self.loss)
 
-            metric_init_op = tf.group(
-                [var.initializer for var in self.graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)],
-                name='metric_init_op')
-            metric_update_op = tf.group([top5_op, top1_op, loss_op], name='metric_update_op')
+            metric_update_op = tf.group([top5_op, top1_op, loss_op], name='update_op')
 
             top5 = tf.identity(top5, 'top5_accuracy')
             top1 = tf.identity(top1, 'top1_accuracy')

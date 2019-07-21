@@ -37,11 +37,12 @@ class Trainer:
         graph = self.sess.graph
 
         with graph.as_default():
-            metric_init_op = graph.get_operation_by_name('metrics/metric_init_op')
-            metric_update_op = graph.get_operation_by_name('metrics/metric_update_op')
+            metric_init_op = tf.group(
+                [var.initializer for var in graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)])
+            metric_update_op = graph.get_operation_by_name('metric/update_op')
 
-            top1 = graph.get_tensor_by_name('metrics/top1_accuracy:0')
-            top5 = graph.get_tensor_by_name('metrics/top5_accuracy:0')
+            top1 = graph.get_tensor_by_name('metric/top1_accuracy:0')
+            top5 = graph.get_tensor_by_name('metric/top5_accuracy:0')
 
             sess.run([tf.global_variables_initializer(),
                       tf.local_variables_initializer()])
