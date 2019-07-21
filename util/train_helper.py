@@ -65,13 +65,14 @@ class Trainer:
                     sess.run(metric_update_op,
                              feed_dict=feed(batch_x, batch_y))
 
-                summary, top1_val, top5_val = self.sess.run(
+                *summaries, top1_val, top5_val = self.sess.run(
                     tf.get_collection(tf.GraphKeys.SUMMARIES) + [top1, top5],
                     feed_dict=feed(batch_x, batch_y))
 
                 print('[{:3d} epoch train top-1 acc : {:2.2f}% | top-5 acc : {:2.2f}%' \
                       .format(epoch, top1_val, top5_val))
-                self.train_writer.add_summary(summary, global_step.eval(sess))
+                for summary in summaries:
+                    self.train_writer.add_summary(summary, global_step.eval(sess))
 
                 sess.run(metric_init_op)
                 for step in range(0, len(self.test_set) // 1000):
@@ -81,11 +82,12 @@ class Trainer:
                     sess.run(metric_update_op,
                              feed_dict=feed(batch_x, batch_y))
 
-                summary, top1_val, top5_val = sess.run(
+                *summaries, top1_val, top5_val = sess.run(
                     tf.get_collection(tf.GraphKeys.SUMMARIES) + [top1, top5],
                     feed_dict=feed(batch_x, batch_y))
 
                 print('[{:3d} epoch test top-1 acc : {:2.2f}% | top-5 acc : {:2.2f}%' \
                       .format(epoch, top1_val, top5_val))
 
-                self.test_writer.add_summary(summary, global_step.eval(sess))
+                for summary in summaries:
+                    self.test_writer.add_summary(summary, global_step.eval(sess))
