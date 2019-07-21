@@ -38,7 +38,9 @@ if __name__ == '__main__':
     net.build(*prms)
 
     sess = tf.Session(graph=net.graph)
-    pretrained_net = Trainer(sess, train_set, test_set, LOG_DIR).run()
+    trnr = Trainer(sess, train_set, test_set, LOG_DIR)
+    trnr.n_epoch = 1
+    pretrained_net = trnr.run()
     # pretrained_net.show() tensorboard
 
     reconstructed_net = VGGNet(13)

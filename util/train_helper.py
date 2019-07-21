@@ -47,7 +47,7 @@ class Trainer:
             sess.run([tf.global_variables_initializer(),
                       tf.local_variables_initializer()])
 
-            global_step = tf.train.get_global_step(graph)
+            global_step = tf.train.get_or_create_global_step(graph)
             for epoch in range(self.n_epoch):
                 for step in tqdm(range(self.n_data // self.n_batch)):
                     batch_x, batch_y = self.train_set.next_batch(self.n_batch)
