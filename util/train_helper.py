@@ -44,10 +44,10 @@ class Trainer:
             top1 = graph.get_tensor_by_name('metric/top1_accuracy:0')
             top5 = graph.get_tensor_by_name('metric/top5_accuracy:0')
 
+            global_step = tf.train.get_or_create_global_step(graph)
             sess.run([tf.global_variables_initializer(),
                       tf.local_variables_initializer()])
 
-            global_step = tf.train.get_or_create_global_step(graph)
             for epoch in range(self.n_epoch):
                 for step in tqdm(range(self.n_data // self.n_batch)):
                     batch_x, batch_y = self.train_set.next_batch(self.n_batch)
