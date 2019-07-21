@@ -41,6 +41,7 @@ class Network(ABC):
             trainable_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
             for i, layer in enumerate(trainable_variables):
                 w_shape = weights[i].shape
+                print(w_shape)
                 op = tf.assign(layer[:w_shape[0], :w_shape[1], :w_shape[2], :w_shape[3]],
                                weights[i])
                 ops.append(op)
