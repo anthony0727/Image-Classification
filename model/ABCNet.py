@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import tensorflow as tf
+import numpy as np
 
 
 class Network(ABC):
@@ -39,7 +40,9 @@ class Network(ABC):
         with self.graph.as_default():
             trainable_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
             for i, layer in enumerate(trainable_variables):
-                op = tf.assign(layer, weights[i])
+                w_shape = weights[i].shape
+                op = tf.assign(layer[:w_shape[0], :w_shape[1], :w_shape[2], :w_shape[3]],
+                               weights[i])
                 ops.append(op)
 
         return ops
@@ -63,4 +66,3 @@ class Network(ABC):
     @abstractmethod
     def attach_summary(self):
         pass
-
