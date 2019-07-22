@@ -44,7 +44,8 @@ class Dataset(object):
         return next(self.generator)
 
     def shuffle(self):
-        indices = np.shuffle(np.arange(len(self)))
+        indices = np.arange(len(self))
+        np.random.shuffle(indices)
         self.images[indices] = self.images[indices]
         self.labels[indices] = self.labels[indices]
 
