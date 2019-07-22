@@ -43,6 +43,11 @@ class Dataset(object):
     def next_batch(self):
         return next(self.generator)
 
+    def shuffle(self):
+        indices = np.shuffle(np.arange(len(self)))
+        self.images[indices] = self.images[indices]
+        self.labels[indices] = self.labels[indices]
+
 
 def random_crop_and_pad(images, pad=4):
     _, h, w, _ = images.shape
