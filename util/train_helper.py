@@ -15,11 +15,8 @@ def feed(x, y, is_train=False):
     return feed_dict
 
 
-def train(sess, log_dir):
+def train(sess, log_dir, n_epoch=128, n_batch=128):
     graph = sess.graph
-
-    n_epoch = 1
-    n_batch = 128
 
     (train_x, train_y), (test_x, test_y) = load_cifar100()
 
@@ -87,7 +84,6 @@ def train(sess, log_dir):
                 test_writer.add_summary(summary, step)
 
     return sess
-
 
 # class Trainer:
 #     def __init__(self, sess, train_set, test_set, log_dir, n_epoch=100, n_batch=128):

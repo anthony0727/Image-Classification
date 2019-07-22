@@ -107,7 +107,6 @@ class VGG(Network):
             self.attach_summary(top5, top1, metric_loss)
 
     def attach_summary(self, top5, top1, metric_loss):
-        print(tf.GraphKeys.METRIC_VARIABLES)
         tf.summary.scalar('top5_tb', top5)
         tf.summary.scalar('top1_tb', top1)
         tf.summary.scalar('loss_tb', metric_loss)
