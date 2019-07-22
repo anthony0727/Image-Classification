@@ -1,62 +1,51 @@
-"""
-this file is to be presented in .ipynb format
-"""
-
-import gc
-
 import tensorflow as tf
-
-from util.data_helper import load_cifar100, Dataset
-from model.vggnet import VGGNet
-from util.train_helper import Trainer
-
-OPTIMIZERS = {
-    'adam': tf.train.AdamOptimizer,
-    'momentum': tf.train.MomentumOptimizer
-}
-
-# hparam
-batch_size = 100
-min_loss = 1000000.0
-learning_rate = 0.0005
-epochs = 10000
-
-LOG_DIR = './log'
+from model.vgg import VGG
+from util import train
 
 input_shape = (32, 32, 3)
 n_class = 100
 
-if __name__ == '__main__':
-    (train_x, train_y), (test_x, test_y) = load_cifar100()
+pretrained_vgg = VGG(11)
+pretrained_vgg.build(input_shape, n_class)
 
-    train_set = Dataset(train_x, train_y)
-    test_set = Dataset(test_x, test_y)
+log_dir = './log'
 
-    prms = (input_shape, n_class)
+with pretrained_vgg.graph.as_default() as graph:
+    loss = graph.get_tensor_by_name('loss:0')
+    lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
+    global_step = tf.train.get_or_create_global_step()
 
-    net = VGGNet(11)
-    net.build(*prms)
+    with tf.variable_scope('optimizer'):
+       tf.train.MomentumOptimizer(lr, 0.9).minimize(loss, global_step)
 
-    sess = tf.Session(graph=net.graph)
-    with net.graph.as_default():
-        trnr = Trainer(sess, train_set, test_set, LOG_DIR)
-        trnr.n_epoch = 1
-        sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
-        pretrained_net = trnr.run()
-        # pretrained_net.show() tensorboard
+    sess = tf.Session(graph=graph)
+    sess = train(sess, log_dir)
+    saver = tf.train.Saver()
+    saver.save(sess, 'vgg11')
 
-        reconstructed_net = VGGNet(13)
-        reconstructed_net.build(*prms)
+reconstructed_vgg = VGG(13)
+reconstructed_vgg.build(input_shape, n_class)
+with reconstructed_vgg.graph.as_default():
+    transfer_weights = \
+        tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, '(VGGBLOCK-1/conv1)') + \
+        tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, '(VGGBLOCK-2/conv1)') + \
+        tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, '(VGGBLOCK-3/conv1|conv2)') + \
+        tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 'FC/')
 
-        transfer_ops = reconstructed_net.transfer_ops(pretrained_net)
+with reconstructed_vgg.graph.as_default() as graph:
+    sess = tf.Session(graph=graph)
+    saver = tf.train.Saver(var_list=transfer_weights)
+    saver.restore(sess, './vgg/vgg11')
+    sess = train(sess, log_dir)
 
-    with reconstructed_net.graph.as_default():
-        sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
-        sess.run(transfer_ops)
+    with tf.variable_scope('optimizer'):
+       tf.train.AdamOptimizer(lr).minimize(loss, global_step)
 
-    del pretrained_net, sess
-    gc.collect()
+    with tf.variable_scope('initialization'):
+        global_vars = tf.global_variables()
+        is_not_initialized = sess.run([tf.is_variable_initialized(var) for var in global_vars])
 
-    sess = tf.Session(graph=reconstructed_net.graph)
-    reconstructed_net = Trainer(sess, train_set, test_set, LOG_DIR).run()
-    # reconstructed_net.show() tensorboard
+        uninitialized_vars = [v for (v, f) in zip(global_vars, is_not_initialized) if not f]
+
+    if len(uninitialized_vars):
+        sess.run(tf.variables_initializer(uninitialized_vars))

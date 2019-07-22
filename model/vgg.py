@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
-import random
 import tensorflow as tf
-import matplotlib.pyplot as plt
-import os
 
 from model.ABCNet import Network
-from data import Cifar
 
 N_VGGBLOCK = 5
 
@@ -16,6 +11,7 @@ vgg13_config = [2, 2, 2, 2, 2]
 vgg16_config = [2, 2, 3, 3, 3]
 vgg19_config = [2, 2, 4, 4, 4]
 
+tf.train.Saver
 vgg_config = {
     11: vgg11_config,
     13: vgg13_config,
@@ -41,15 +37,15 @@ def fc(layer, is_train):
 
 def vgg_block(filters, ith_block, layer, n_layers):
     for ith_layer in range(1, n_layers + 1):
-        layer = conv(layer, filters, name='conv{}'.format(ith_layer))
+        layer = conv(layer, filters, name='conv-{}'.format(ith_layer))
     layer = tf.layers.MaxPooling2D((2, 2), (2, 2), name='MaxPool-{}'.format(ith_block))(layer)
 
     return layer
 
 
-class VGGNet(Network):
+class VGG(Network):
     def __init__(self, n_layer=11):
-        super(VGGNet, self).__init__()
+        super(VGG, self).__init__()
 
         if n_layer not in vgg_config.keys():
             raise ValueError("Unrecognizable VGGNet. Only VGG11, VGG13, VGG16, VGG19 are available")
@@ -72,8 +68,10 @@ class VGGNet(Network):
 
         with tf.variable_scope('FC'):
             layer = tf.layers.Flatten()(layer)
+
             layer = fc(layer, self.is_train)
             layer = fc(layer, self.is_train)
+
             logits = tf.layers.Dense(self.n_class)(layer)
 
         self.logits = tf.identity(logits, name='logits')
