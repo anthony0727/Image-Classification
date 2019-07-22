@@ -11,33 +11,37 @@ def load_cifar100():
     return (train_x, train_y), (test_x, test_y)
 
 
+def batch_generator(data, labels, batch_size=32):
+    start_idx = 0
+    num_step = len(data) // batch_size
+    indexes = np.arange(0, len(data))
+    while True:
+        if start_idx >= num_step - 1:
+            np.random.shuffle(indexes)
+            start_idx = 0
+        else:
+            start_idx += 1
+        batch_index = indexes[start_idx * batch_size:
+                              (start_idx + 1) * batch_size]
+
+        batch_data = data[batch_index]
+        batch_label = labels[batch_index]
+
+        yield batch_data, batch_label
+
+
 class Dataset(object):
-    def __init__(self, images, labels):
+    def __init__(self, images, labels, n_batch=128):
         self.images = images.copy()
         self.labels = labels.copy().ravel()
         self.counter = 0
+        self.generator = batch_generator(self.images, self.labels, batch_size=n_batch)
 
     def __len__(self):
         return len(self.images)
 
-    def next_batch(self, batch_size=32):
-        if self.counter + batch_size > len(self):
-            self.shuffle()
-            self.counter = 0
-
-        i = self.counter
-        batch_images = self.images[i:i + batch_size]
-        batch_labels = self.labels[i:i + batch_size]
-
-        self.counter += batch_size
-
-        return batch_images.copy(), batch_labels.copy()
-
-    def shuffle(self):
-        indices = np.arange(len(self))
-        np.random.shuffle(indices)
-        self.images = self.images[indices]
-        self.labels = self.labels[indices]
+    def next_batch(self):
+        return next(self.generator)
 
 
 def random_crop_and_pad(images, pad=4):

@@ -20,8 +20,8 @@ def train(sess, log_dir, n_epoch=128, n_batch=128):
 
     (train_x, train_y), (test_x, test_y) = load_cifar100()
 
-    train_set = Dataset(train_x, train_y)
-    test_set = Dataset(test_x, test_y)
+    train_set = Dataset(train_x, train_y, n_batch=n_batch)
+    test_set = Dataset(test_x, test_y, n_batch=n_batch)
 
     n_data = len(train_set)
 
@@ -41,7 +41,7 @@ def train(sess, log_dir, n_epoch=128, n_batch=128):
 
         for epoch in range(n_epoch):
             for step in tqdm(range(n_data // n_batch)):
-                batch_x, batch_y = train_set.next_batch(n_batch)
+                batch_x, batch_y = train_set.next_batch()
                 batch_x = augment_images(batch_x)
                 sess.run(tf.get_collection(tf.GraphKeys.TRAIN_OP),
                          feed_dict=feed(batch_x, batch_y, True))
@@ -84,74 +84,3 @@ def train(sess, log_dir, n_epoch=128, n_batch=128):
                 test_writer.add_summary(summary, step)
 
     return sess
-
-# class Trainer:
-#     def __init__(self, sess, train_set, test_set, log_dir, n_epoch=100, n_batch=128):
-#         self.sess = sess
-#         self.train_set = train_set
-#         self.test_set = test_set
-#         self.log_dir = log_dir
-#         self.test_writer = tf.summary.FileWriter(os.path.join(self.log_dir, './test'))
-#         self.train_writer = tf.summary.FileWriter(os.path.join(self.log_dir, './train'), self.sess.graph)
-#
-#         self.n_epoch = n_epoch
-#         self.n_batch = n_batch
-#         self.n_data = len(train_set)
-#
-#     def run(self):
-#         sess = self.sess
-#         graph = self.sess.graph
-#
-#         with graph.as_default():
-#             metric_init_op = tf.group(
-#                 [var.initializer for var in graph.get_collection(tf.GraphKeys.METRIC_VARIABLES)])
-#             metric_update_op = graph.get_operation_by_name('metric/update_op')
-#
-#             top1 = graph.get_tensor_by_name('metric/top1_accuracy:0')
-#             top5 = graph.get_tensor_by_name('metric/top5_accuracy:0')
-#
-#             # global_step = tf.train.get_or_create_global_step(graph)
-#
-#             for epoch in range(self.n_epoch):
-#                 for step in tqdm(range(self.n_data // self.n_batch)):
-#                     batch_x, batch_y = self.train_set.next_batch(self.n_batch)
-#                     batch_x = augment_images(batch_x)
-#                     sess.run(tf.get_collection(tf.GraphKeys.TRAIN_OP),
-#                              feed_dict=feed(batch_x, batch_y, True))
-#
-#                 self.train_set.shuffle()
-#
-#                 sess.run(metric_init_op)
-#                 for step in range(0, len(self.train_set) // 1000):
-#                     batch_x = self.train_set.images[step * 1000:(step + 1) * 1000]
-#                     batch_y = self.train_set.labels[step * 1000:(step + 1) * 1000].ravel()
-#
-#                     sess.run(metric_update_op,
-#                              feed_dict=feed(batch_x, batch_y))
-#
-#                 *summaries, top1_val, top5_val = self.sess.run(
-#                     tf.get_collection(tf.GraphKeys.SUMMARIES) + [top1, top5],
-#                     feed_dict=feed(batch_x, batch_y))
-#
-#                 print('[{:3d} epoch train top-1 acc : {:2.2f}% | top-5 acc : {:2.2f}%' \
-#                       .format(epoch, top1_val, top5_val))
-#                 for summary in summaries:
-#                     self.train_writer.add_summary(summary, step)
-#
-#                 sess.run(metric_init_op)
-#                 for step in range(0, len(self.test_set) // 1000):
-#                     batch_x, self.test_set.images[step * 1000:(step + 1) * 1000]
-#                     batch_y, self.test_set.labels[step * 1000:(step + 1) * 1000].ravel()
-#
-#                     sess.run(metric_update_op,
-#                              feed_dict=feed(batch_x, batch_y))
-#
-#                 *summaries, top1_val, top5_val = sess.run(
-#                     tf.get_collection(tf.GraphKeys.SUMMARIES) + [top1, top5],
-#                     feed_dict=feed(batch_x, batch_y))
-#
-#                 print('[{:3d} epoch test top-1 acc : {:2.2f}% | top-5 acc : {:2.2f}%' \
-#                       .format(epoch, top1_val, top5_val))
-#
-#                 for summary in summaries:
-#                     self.test_writer.add_summary(summary, step)
