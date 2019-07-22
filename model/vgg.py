@@ -43,6 +43,15 @@ def vgg_block(filters, ith_block, layer, n_layers):
     return layer
 
 
+def vgg_bn_block(filters, ith_block, layer, n_layers, is_train):
+    for ith_layer in range(1, n_layers + 1):
+        layer = conv(layer, filters, name='conv-{}'.format(ith_layer))
+        layer = tf.layers.BatchNormalization(layer, is_train)
+    layer = tf.layers.MaxPooling2D((2, 2), (2, 2), name='MaxPool-{}'.format(ith_block))(layer)
+
+    return layer
+
+
 class VGG(Network):
     def __init__(self, n_layer=11):
         super(VGG, self).__init__()
@@ -58,7 +67,7 @@ class VGG(Network):
         self.lr = tf.placeholder(tf.float32, (), name='lr')
         self.is_train = tf.placeholder(tf.bool, name='is_train')
 
-    def attach_layers(self, is_bn = True):
+    def attach_layers(self, is_bn=True):
         layer = self.xs
 
         config_zip = zip(vgg_config[self.n_layer], filters_config)
@@ -68,16 +77,9 @@ class VGG(Network):
 
         layer = tf.layers.Flatten()(layer)
 
-        if is_bn:
-            from util.network_helper import dense_bn_relu
-
-            with tf.variable_scope('bn'):
-                layer = dense_bn_relu(layer, self.is_train, 1024, name='FC-1')
-                layer = dense_bn_relu(layer, self.is_train, 1024, name='FC-1')
-        else:
-            with tf.variable_scope('FC'):
-                layer = fc(layer, self.is_train)
-                layer = fc(layer, self.is_train)
+        with tf.variable_scope('FC'):
+            layer = fc(layer, self.is_train)
+            layer = fc(layer, self.is_train)
 
         logits = tf.layers.Dense(self.n_class)(layer)
         self.logits = tf.identity(logits, name='logits')
@@ -104,7 +106,7 @@ class VGG(Network):
             top1, top1_op = tf.metrics.mean(tf.cast(tf.nn.in_top_k(self.y_pred, self.ys, k=1), tf.float32) * 100)
             metric_loss, loss_op = tf.metrics.mean(self.loss)
 
-            metric_update_op = tf.group([top5_op, top1_op, loss_op], name='update_op')
+            tf.group([top5_op, top1_op, loss_op], name='update_op')
 
             top5 = tf.identity(top5, 'top5_accuracy')
             top1 = tf.identity(top1, 'top1_accuracy')
@@ -116,4 +118,4 @@ class VGG(Network):
         tf.summary.scalar('top5_tb', top5)
         tf.summary.scalar('top1_tb', top1)
         tf.summary.scalar('loss_tb', metric_loss)
-        merged = tf.summary.merge_all(name='merge_all')
+        tf.summary.merge_all(name='merge_all')
