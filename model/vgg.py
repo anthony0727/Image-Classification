@@ -58,7 +58,7 @@ class VGG(Network):
         self.lr = tf.placeholder(tf.float32, (), name='lr')
         self.is_train = tf.placeholder(tf.bool, name='is_train')
 
-    def attach_layers(self):
+    def attach_layers(self, is_bn = True):
         layer = self.xs
 
         config_zip = zip(vgg_config[self.n_layer], filters_config)
@@ -66,14 +66,20 @@ class VGG(Network):
             with tf.variable_scope('VGGBLOCK-{}'.format(ith_block)):
                 layer = vgg_block(filters, ith_block, layer, n_layers)
 
-        with tf.variable_scope('FC'):
-            layer = tf.layers.Flatten()(layer)
+        layer = tf.layers.Flatten()(layer)
 
-            layer = fc(layer, self.is_train)
-            layer = fc(layer, self.is_train)
+        if is_bn:
+            from util.network_helper import dense_bn_relu
 
-            logits = tf.layers.Dense(self.n_class)(layer)
+            with tf.variable_scope('bn'):
+                layer = dense_bn_relu(layer, self.is_train, 1024, name='FC-1')
+                layer = dense_bn_relu(layer, self.is_train, 1024, name='FC-1')
+        else:
+            with tf.variable_scope('FC'):
+                layer = fc(layer, self.is_train)
+                layer = fc(layer, self.is_train)
 
+        logits = tf.layers.Dense(self.n_class)(layer)
         self.logits = tf.identity(logits, name='logits')
         self.y_pred = tf.nn.softmax(logits, name='y_pred')
 
