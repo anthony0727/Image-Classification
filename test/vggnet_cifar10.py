@@ -1,4 +1,5 @@
 # Load Module
+import os
 
 import tensorflow as tf
 import gc
@@ -7,8 +8,8 @@ from model.vgg import VGG
 from util import train
 
 # Declare Static Variables
-
-log_dir = './log'
+vgg11_log_dir = './vgg/vgg11'
+vgg13_log_dir = './vgg/vgg13'
 
 input_shape = (32, 32, 3)
 n_class = 100
@@ -19,7 +20,6 @@ pretrained_vgg = VGG(11)
 pretrained_vgg.build(input_shape, n_class)
 
 # Pretrain VGG11
-
 with pretrained_vgg.graph.as_default() as graph:
     loss = graph.get_tensor_by_name('loss:0')
     lr = tf.placeholder_with_default(1e-2, (), name='learning_rate')
@@ -29,9 +29,11 @@ with pretrained_vgg.graph.as_default() as graph:
         tf.train.MomentumOptimizer(lr, 0.9).minimize(loss, global_step)
 
     sess = tf.Session(graph=graph)
-    sess = train(sess, log_dir)
+    sess = train(sess, os.path.join(vgg11_log_dir, 'log'))
+
+with pretrained_vgg.graph.as_default() as graph:
     saver = tf.train.Saver()
-    saver.save(sess, './vgg/vgg11')
+    saver.save(sess, vgg11_log_dir)
 
 # Reserve some memory
 
@@ -39,7 +41,6 @@ del pretrained_vgg.graph
 gc.collect()
 
 # Build VGG13
-
 reconstructed_vgg = VGG(13)
 reconstructed_vgg.build(input_shape, n_class)
 
@@ -58,7 +59,7 @@ with reconstructed_vgg.graph.as_default() as graph:
     sess = tf.Session(graph=graph)
 
     saver = tf.train.Saver(var_list=transfer_weights)
-    saver.restore(sess, './vgg/vgg11')
+    saver.restore(sess, vgg11_log_dir)
 
 # Train VGG13
 
@@ -80,8 +81,6 @@ with reconstructed_vgg.graph.as_default() as graph:
         sess.run(tf.variables_initializer(uninitialized_vars))
 
     sess = tf.Session(graph=graph)
-    sess = train(sess, log_dir)
+    sess = train(sess, os.path.join(vgg13_log_dir, 'log'))
     saver = tf.train.Saver()
-    saver.save(sess, './vgg/vgg11')
-
-
+    saver.save(sess, vgg13_log_dir)
