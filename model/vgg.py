@@ -28,16 +28,20 @@ def conv(layer, units, name):
     return layer
 
 
-def fc(layer, is_train):
+def fc(layer, is_train, is_bn):
     layer = tf.layers.Dense(1024, activation=tf.nn.relu)(layer)
-    layer = tf.layers.Dropout(0.5)(layer, training=is_train)
+    if is_bn:
+        layer = tf.layers.BatchNormalization()(layer)
+    layer = tf.layers.Dropout(0.4)(layer, training=is_train)
 
     return layer
 
 
-def vgg_block(filters, ith_block, layer, n_layers):
+def vgg_block(filters, ith_block, layer, n_layers, is_bn, is_train):
     for ith_layer in range(1, n_layers + 1):
         layer = conv(layer, filters, name='conv-{}'.format(ith_layer))
+        if is_bn:
+            layer = tf.layers.BatchNormalization()(layer, is_train)
     layer = tf.layers.MaxPooling2D((2, 2), (2, 2), name='MaxPool-{}'.format(ith_block))(layer)
 
     return layer
@@ -53,13 +57,14 @@ def vgg_bn_block(filters, ith_block, layer, n_layers, is_train):
 
 
 class VGG(Network):
-    def __init__(self, n_layer=11):
+    def __init__(self, n_layer=11, is_bn=True):
         super(VGG, self).__init__()
 
         if n_layer not in vgg_config.keys():
             raise ValueError("Unrecognizable VGGNet. Only VGG11, VGG13, VGG16, VGG19 are available")
 
         self.n_layer = n_layer
+        self.is_bn = is_bn
 
     def attach_placeholders(self):
         self.xs = tf.placeholder(tf.float32, (None, *self.input_shape), name='xs')
@@ -67,19 +72,19 @@ class VGG(Network):
         self.lr = tf.placeholder(tf.float32, (), name='lr')
         self.is_train = tf.placeholder(tf.bool, name='is_train')
 
-    def attach_layers(self, is_bn=True):
+    def attach_layers(self):
         layer = self.xs
 
         config_zip = zip(vgg_config[self.n_layer], filters_config)
         for ith_block, (n_layers, filters) in enumerate(config_zip, start=1):
             with tf.variable_scope('VGGBLOCK-{}'.format(ith_block)):
-                layer = vgg_block(filters, ith_block, layer, n_layers)
+                layer = vgg_block(filters, ith_block, layer, n_layers, self.is_train, self.is_bn)
 
         layer = tf.layers.Flatten()(layer)
 
         with tf.variable_scope('FC'):
-            layer = fc(layer, self.is_train)
-            layer = fc(layer, self.is_train)
+            layer = fc(layer, self.is_train, self.is_bn)
+            layer = fc(layer, self.is_train, self.is_bn)
 
         logits = tf.layers.Dense(self.n_class)(layer)
         self.logits = tf.identity(logits, name='logits')

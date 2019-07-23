@@ -22,6 +22,11 @@ def low_level_batch_normalize(xs, is_train):
         train_mean = tf.Variable(tf.zeros(input_size), trainable=False)
         train_var = tf.Variable(tf.zeros(input_size), trainable=False)
 
+    def normalize(mean, var):
+        x_norm = (xs - mean) / tf.sqrt(var + epsilon)
+        ys = gamma * x_norm + beta
+        return ys
+
     def train_phase():
         batch_mean, batch_var = tf.nn.moments(xs, axes=[0])
         update_mean = tf.assign(train_mean,
@@ -31,16 +36,16 @@ def low_level_batch_normalize(xs, is_train):
                                train_var * decay + batch_var * (1 - decay))
 
         with tf.control_dependencies([update_mean, update_var]):
-            x_norm = (xs - batch_mean) / tf.sqrt(batch_var + epsilon)
-            ys = gamma * x_norm + beta
+            ys = normalize(batch_mean, batch_var)
 
         return ys
 
     def test_phase():
-        x_norm = (xs - train_mean) / tf.sqrt(train_var + epsilon)
-        ys = gamma * x_norm + beta
+        ys = normalize(train_mean, train_var)
 
         return ys
+
+
 
     ys = tf.cond(is_train, train_phase, test_phase)
 
