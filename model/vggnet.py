@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import tensorflow as tf
-
-from model.ABCNet import Network
+from model.ABCNet import *
 
 N_VGGBLOCK = 5
 
@@ -11,7 +9,6 @@ vgg13_config = [2, 2, 2, 2, 2]
 vgg16_config = [2, 2, 3, 3, 3]
 vgg19_config = [2, 2, 4, 4, 4]
 
-tf.train.Saver
 vgg_config = {
     11: vgg11_config,
     13: vgg13_config,
@@ -40,8 +37,7 @@ def fc(layer, is_train, is_bn):
 def vgg_block(filters, ith_block, layer, n_layers, is_bn, is_train):
     for ith_layer in range(1, n_layers + 1):
         layer = conv(layer, filters, name='conv-{}'.format(ith_layer))
-        if is_bn:
-            layer = tf.layers.BatchNormalization()(layer, is_train)
+        layer = tf.cond(is_bn, lambda: tf.layers.BatchNormalization()(layer, is_train))
     layer = tf.layers.MaxPooling2D((2, 2), (2, 2), name='MaxPool-{}'.format(ith_block))(layer)
 
     return layer
@@ -56,9 +52,9 @@ def vgg_bn_block(filters, ith_block, layer, n_layers, is_train):
     return layer
 
 
-class VGG(Network):
-    def __init__(self, n_layer=11, is_bn=True):
-        super(VGG, self).__init__()
+class VGGNet(Network):
+    def __init__(self, n_layer=11, is_bn=tf.constant(True)):
+        super(VGGNet, self).__init__()
 
         if n_layer not in vgg_config.keys():
             raise ValueError("Unrecognizable VGGNet. Only VGG11, VGG13, VGG16, VGG19 are available")
@@ -67,7 +63,7 @@ class VGG(Network):
         self.is_bn = is_bn
 
     def attach_placeholders(self):
-        self.xs = tf.placeholder(tf.float32, (None, *self.input_shape), name='xs')
+        self.xs = tf.placeholder(tf.float32, (None, *self.image_shape), name='xs')
         self.ys = tf.placeholder(tf.int32, (None,), name='ys')
         self.lr = tf.placeholder(tf.float32, (), name='lr')
         self.is_train = tf.placeholder(tf.bool, name='is_train')

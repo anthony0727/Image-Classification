@@ -1,6 +1,10 @@
+# -*- coding: utf-8 -*-
+
 from abc import ABC, abstractmethod
 import tensorflow as tf
+import pandas as pd
 import numpy as np
+import numpy.random as npr
 
 
 class Network(ABC):
@@ -19,13 +23,13 @@ class Network(ABC):
             self.is_train = tf.placeholder_with_default(True, None)
 
             # tuple
-            self.input_shape = None
+            self.image_shape = None
 
             # integer
             self.n_class = 0
 
-    def build(self, input_shape, num_class):
-        self.input_shape = input_shape
+    def build(self, image_shape, num_class):
+        self.image_shape = image_shape
         self.n_class = num_class
 
         with self.graph.as_default():

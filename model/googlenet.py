@@ -1,10 +1,6 @@
-import tensorflow as tf
-import pandas as pd
-import numpy as np
-import numpy.random as npr
-from tqdm import tqdm
+# -*- coding: utf-8 -*-
 
-from model.ABCNet import Network
+from model.ABCNet import *
 
 he_init = tf.initializers.he_uniform()
 xavier_init = tf.initializers.glorot_normal()
@@ -51,7 +47,7 @@ class GoogLeNet(Network):
         self.aux_logit_4a, self.aux_logit_4d = None, None
 
     def attach_placeholders(self):
-        images = tf.placeholder(tf.float32, (None, *self.input_shape), name='images')
+        images = tf.placeholder(tf.float32, (None, *self.image_shape), name='images')
         image_mean = tf.constant([123.68, 116.779, 103.939], tf.float32)
 
         self.xs = images - image_mean

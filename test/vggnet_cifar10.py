@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 import gc
 
-from model.vgg import VGG
+from model.vggnet import VGGNet
 from util import train
 
 # Declare Static Variables
@@ -16,7 +16,7 @@ n_class = 100
 
 # Build VGG11
 
-pretrained_vgg = VGG(11)
+pretrained_vgg = VGGNet(11)
 pretrained_vgg.build(input_shape, n_class)
 
 # Pretrain VGG11
@@ -41,7 +41,7 @@ del pretrained_vgg.graph
 gc.collect()
 
 # Build VGG13
-reconstructed_vgg = VGG(13)
+reconstructed_vgg = VGGNet(13)
 reconstructed_vgg.build(input_shape, n_class)
 
 # Collect weights to transfer
