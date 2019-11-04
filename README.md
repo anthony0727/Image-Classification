@@ -1,5 +1,5 @@
 # Image-Classification
-classify popular datasets(cifar10, ImageNet, etc.)
+classification of popular image datasets(cifar10, ImageNet, etc.)
 
 usage : 
 
