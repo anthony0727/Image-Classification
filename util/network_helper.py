@@ -45,8 +45,6 @@ def low_level_batch_normalize(xs, is_train):
 
         return ys
 
-
-
     ys = tf.cond(is_train, train_phase, test_phase)
 
     return ys

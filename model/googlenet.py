@@ -123,7 +123,6 @@ class GoogLeNet(Network):
                 name='metric_init_op')
             tf.group([top5_op, top1_op, metric_loss_op], name='metric_update_op')
 
-
             tf.identity(top5, 'top5_accuracy')
             tf.identity(top1, 'top1_accuracy')
 
